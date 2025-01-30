@@ -1,58 +1,65 @@
 import 'package:flutter/material.dart';
 import '../constants/constants.dart';
+import '../models/models.dart';
+import '../services/database_service.dart';
+import '../services/firebase_service.dart';
+import '../utils/currency_formatter.dart';
+import '../utils/date_formatter.dart';
 import '../widgets/widgets.dart';
-import '../models/transaction.dart';
+import 'transaction_form_screen.dart';
 
 class TransactionsScreen extends StatefulWidget {
-  const TransactionsScreen({super.key});
+  const TransactionsScreen({Key? key}) : super(key: key);
 
   @override
   State<TransactionsScreen> createState() => _TransactionsScreenState();
 }
 
 class _TransactionsScreenState extends State<TransactionsScreen> {
-  String _selectedFilter = 'All';
-  final List<String> _filters = ['All', 'Income', 'Expense'];
+  List<Transaction> _transactions = [];
+  bool _isLoading = true;
 
-  // Sample transactions list - Replace with actual data from your backend
-  final List<Transaction> _transactions = [
-    Transaction(
-      userId: '1',
-      amount: 120.50,
-      date: DateTime.now().subtract(const Duration(days: 1)),
-      type: TransactionType.expense,
-      category: TransactionCategory.shopping,
-      description: 'Grocery Shopping',
-    ),
-    Transaction(
-      userId: '1',
-      amount: 3500.00,
-      date: DateTime.now().subtract(const Duration(days: 2)),
-      type: TransactionType.income,
-      category: TransactionCategory.salary,
-      description: 'Salary Deposit',
-    ),
-    Transaction(
-      userId: '1',
-      amount: 15.99,
-      date: DateTime.now().subtract(const Duration(days: 3)),
-      type: TransactionType.expense,
-      category: TransactionCategory.entertainment,
-      description: 'Netflix Subscription',
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadTransactions();
+  }
 
-  List<Transaction> get filteredTransactions {
-    if (_selectedFilter == 'All') {
-      return _transactions;
-    } else if (_selectedFilter == 'Income') {
-      return _transactions
-          .where((t) => t.type == TransactionType.income)
-          .toList();
-    } else {
-      return _transactions
-          .where((t) => t.type == TransactionType.expense)
-          .toList();
+  Future<void> _loadTransactions() async {
+    setState(() => _isLoading = true);
+    try {
+      final currentUser = FirebaseService().currentUser;
+      if (currentUser == null) {
+        throw Exception('No user logged in');
+      }
+
+      final databaseService = DatabaseService();
+      final transactions =
+          await databaseService.getTransactions(currentUser.id);
+      print(
+          'Loaded ${transactions.length} transactions for user ${currentUser.id}'); // Debug log
+
+      if (mounted) {
+        setState(() {
+          _transactions = transactions
+            ..sort((a, b) => b.date.compareTo(a.date));
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading transactions: $e'); // Debug log
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load transactions: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -63,182 +70,114 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     return Scaffold(
       appBar: CustomAppBar(
         title: 'Transactions',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () {
-              // TODO: Show filter options
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              // TODO: Show search
-            },
-          ),
-        ],
       ),
-      body: Column(
-        children: [
-          // Filter chips
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppConstants.paddingMedium,
-              vertical: AppConstants.paddingSmall,
-            ),
-            child: Row(
-              children: _filters.map((filter) {
-                final isSelected = _selectedFilter == filter;
-                return Padding(
-                  padding:
-                      const EdgeInsets.only(right: AppConstants.paddingSmall),
-                  child: FilterChip(
-                    label: Text(filter),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() {
-                        _selectedFilter = filter;
-                      });
+      body: RefreshIndicator(
+        onRefresh: _loadTransactions,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _transactions.isEmpty
+                ? const Center(child: Text('No transactions found'))
+                : ListView.builder(
+                    padding: const EdgeInsets.all(AppConstants.paddingMedium),
+                    itemCount: _transactions.length,
+                    itemBuilder: (context, index) {
+                      final transaction = _transactions[index];
+                      return Card(
+                        margin: const EdgeInsets.only(
+                            bottom: AppConstants.paddingSmall),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor:
+                                theme.colorScheme.primary.withOpacity(0.1),
+                            child: Icon(
+                              _getTransactionIcon(transaction.category),
+                              color: theme.colorScheme.primary,
+                              size: 20,
+                            ),
+                          ),
+                          title: Text(transaction.description),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                DateFormatter.format(transaction.date),
+                                style: AppConstants.bodySmall,
+                              ),
+                              Text(
+                                transaction.category.toString().split('.').last,
+                                style: AppConstants.bodySmall.copyWith(
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          trailing: Text(
+                            transaction.type == TransactionType.income
+                                ? '+${CurrencyFormatter.format(transaction.amount, Currency.usd)}'
+                                : CurrencyFormatter.format(
+                                    transaction.amount, Currency.usd),
+                            style: AppConstants.titleMedium.copyWith(
+                              color: transaction.type == TransactionType.income
+                                  ? Colors.green
+                                  : Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      );
                     },
                   ),
-                );
-              }).toList(),
-            ),
-          ),
-
-          // Transactions list
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                // TODO: Implement refresh
-              },
-              child: ListView.separated(
-                padding: const EdgeInsets.all(AppConstants.paddingMedium),
-                itemCount: filteredTransactions.length,
-                separatorBuilder: (context, index) => const Divider(),
-                itemBuilder: (context, index) {
-                  final transaction = filteredTransactions[index];
-                  final isExpense = transaction.type == TransactionType.expense;
-                  final amount = isExpense
-                      ? '-\$${transaction.amount.toStringAsFixed(2)}'
-                      : '+\$${transaction.amount.toStringAsFixed(2)}';
-
-                  return _buildTransactionItem(
-                    context,
-                    transaction.description,
-                    amount,
-                    transaction.category.toString().split('.').last,
-                    transaction.date,
-                    _getCategoryIcon(transaction.category),
-                    isExpense ? Colors.red : Colors.green,
-                  );
-                },
-              ),
-            ),
-          ),
-        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'transactions_fab',
-        onPressed: () {
-          // TODO: Add new transaction
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TransactionFormScreen(),
+            ),
+          );
+          if (result == true) {
+            _loadTransactions(); // Reload transactions after adding a new one
+          }
         },
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('Add Transaction'),
       ),
     );
   }
 
-  IconData _getCategoryIcon(TransactionCategory category) {
+  IconData _getTransactionIcon(TransactionCategory category) {
     switch (category) {
       case TransactionCategory.food:
         return Icons.restaurant;
-      case TransactionCategory.transportation:
-        return Icons.directions_car;
-      case TransactionCategory.entertainment:
-        return Icons.movie;
       case TransactionCategory.shopping:
         return Icons.shopping_cart;
+      case TransactionCategory.entertainment:
+        return Icons.movie;
       case TransactionCategory.utilities:
-        return Icons.receipt_long;
+        return Icons.power;
+      case TransactionCategory.transportation:
+        return Icons.directions_car;
       case TransactionCategory.health:
-        return Icons.health_and_safety;
+        return Icons.medical_services;
       case TransactionCategory.education:
         return Icons.school;
+      case TransactionCategory.salary:
+        return Icons.work;
       case TransactionCategory.travel:
         return Icons.flight;
       case TransactionCategory.housing:
         return Icons.home;
       case TransactionCategory.investment:
         return Icons.trending_up;
-      case TransactionCategory.salary:
-        return Icons.account_balance_wallet;
       case TransactionCategory.freelance:
-        return Icons.work;
+        return Icons.computer;
       case TransactionCategory.business:
         return Icons.business;
       case TransactionCategory.gifts:
         return Icons.card_giftcard;
-      case TransactionCategory.other:
-        return Icons.more_horiz;
-    }
-  }
-
-  Widget _buildTransactionItem(
-    BuildContext context,
-    String title,
-    String amount,
-    String category,
-    DateTime date,
-    IconData icon,
-    Color color,
-  ) {
-    return CustomCard(
-      onTap: () {
-        // TODO: Show transaction details
-      },
-      margin: const EdgeInsets.only(bottom: AppConstants.paddingSmall),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.1),
-          child: Icon(icon, color: color, size: 20),
-        ),
-        title: Text(title),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(category),
-            Text(
-              _formatDate(date),
-              style: AppConstants.bodySmall.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-              ),
-            ),
-          ],
-        ),
-        trailing: Text(
-          amount,
-          style: AppConstants.titleMedium.copyWith(
-            color: amount.startsWith('+') ? Colors.green : Colors.red,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    if (difference.inDays == 0) {
-      return 'Today';
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
+      default:
+        return Icons.attach_money;
     }
   }
 }

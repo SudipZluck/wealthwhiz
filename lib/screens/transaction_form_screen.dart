@@ -8,6 +8,8 @@ import '../models/models.dart';
 import '../services/services.dart';
 import '../widgets/widgets.dart';
 import '../utils/utils.dart';
+import '../services/database_service.dart';
+import '../services/firebase_service.dart';
 
 class TransactionFormScreen extends StatefulWidget {
   final Transaction? transaction;
@@ -24,12 +26,14 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   final _notesController = TextEditingController();
   final _sourceController = TextEditingController();
   final _imagePicker = ImagePicker();
+  final _databaseService = DatabaseService();
+  bool _isLoading = false;
 
   TransactionType _type = TransactionType.expense;
-  TransactionCategory _category = TransactionCategory.other;
+  TransactionCategory _category = TransactionCategory.food;
   DateTime _date = DateTime.now();
   File? _receiptImage;
-  bool _isSaving = false;
+  bool _isRecurring = false;
 
   Budget? _selectedBudget;
   List<Budget> _availableBudgets = [];
@@ -134,98 +138,340 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   }
 
   Future<void> _saveTransaction() async {
-    print('_saveTransaction: Starting to save transaction');
-    if (!_formKey.currentState!.validate()) {
-      print('_saveTransaction: Form validation failed');
-      return;
-    }
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+      setState(() {
+        _isLoading = true;
+      });
 
-    setState(() => _isSaving = true);
+      try {
+        final transaction = Transaction(
+          id: '', // Will be set by Firestore
+          userId: '', // Will be set by DatabaseService
+          amount: double.parse(_amountController.text),
+          date: _date,
+          type: _type,
+          category: _category,
+          description: _sourceController.text,
+          notes: _notesController.text,
+          receiptPath: await _saveReceiptImage(),
+          isRecurring: _isRecurring,
+          recurringId: '', // Assuming no recurring ID for now
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
 
-    try {
-      final String? receiptPath = await _saveReceiptImage();
-      print('_saveTransaction: Receipt path - $receiptPath');
+        final (savedTransaction, isFullySynced) =
+            await _databaseService.insertTransaction(transaction);
 
-      final String description = _category == TransactionCategory.other
-          ? _sourceController.text
-          : (_notesController.text.isEmpty
-              ? 'No description'
-              : _notesController.text);
-      print('_saveTransaction: Description - $description');
+        if (!mounted) return;
 
-      final transaction = Transaction(
-        id: widget.transaction?.id ?? const Uuid().v4(),
-        userId: 'current_user_id', // TODO: Get from auth service
-        description: description,
-        type: _type,
-        category: _category,
-        amount: double.parse(_amountController.text),
-        date: _date,
-        notes: _notesController.text.isEmpty ? null : _notesController.text,
-        receiptPath: receiptPath ?? widget.transaction?.receiptPath,
-        syncStatus: SyncStatus.pending,
-        isRecurring: false, // Add missing required fields
-        createdAt: DateTime.now(),
-      );
-      print(
-          '_saveTransaction: Created transaction object - ${transaction.toMap()}');
-
-      // Save to local storage
-      await TransactionService.instance.saveTransaction(transaction);
-      print('_saveTransaction: Saved to local storage');
-
-      // Try to sync with Firestore if online
-      await TransactionService.instance.syncTransactions();
-      print('_saveTransaction: Synced with Firestore');
-
-      if (_selectedBudget != null) {
-        // Update budget spent amount
-        // This would be handled by your budget tracking logic
-      }
-
-      if (mounted) {
-        print('_saveTransaction: Successfully completed, closing screen');
+        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 8),
-                Text(widget.transaction == null
-                    ? 'Transaction added successfully'
-                    : 'Transaction updated successfully'),
-              ],
+            content: Text(
+              isFullySynced
+                  ? 'Transaction saved successfully!'
+                  : 'Transaction saved locally. Will sync when online.',
             ),
+            backgroundColor: isFullySynced ? Colors.green : Colors.orange,
             behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
+            margin: EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      print('_saveTransaction: Error occurred - $e');
-      if (mounted) {
+
+        Navigator.pop(context, savedTransaction);
+      } catch (e) {
+        print('Error saving transaction: $e');
+        if (!mounted) return;
+
+        // Show error message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.error, color: Colors.white),
-                const SizedBox(width: 8),
-                Expanded(child: Text('Failed to save transaction: $e')),
-              ],
-            ),
-            behavior: SnackBarBehavior.floating,
+            content: Text('Error saving transaction: ${e.toString()}'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.transaction == null
+            ? 'Add Transaction'
+            : 'Edit Transaction'),
+        actions: [
+          if (widget.transaction != null)
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: _isLoading ? null : _deleteTransaction,
+            ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.all(AppConstants.paddingLarge),
+                children: [
+                  // Transaction Type
+                  SegmentedButton<TransactionType>(
+                    segments: const [
+                      ButtonSegment(
+                        value: TransactionType.expense,
+                        label: Text('Expense'),
+                        icon: Icon(Icons.remove_circle_outline),
+                      ),
+                      ButtonSegment(
+                        value: TransactionType.income,
+                        label: Text('Income'),
+                        icon: Icon(Icons.add_circle_outline),
+                      ),
+                    ],
+                    selected: {_type},
+                    onSelectionChanged: _onTypeChanged,
+                  ),
+                  const SizedBox(height: AppConstants.paddingLarge),
+
+                  // Amount
+                  if (_type == TransactionType.expense &&
+                      _availableBudgets.isNotEmpty) ...[
+                    const SizedBox(height: AppConstants.paddingMedium),
+                    DropdownButtonFormField<Budget>(
+                      value: _selectedBudget,
+                      decoration: const InputDecoration(
+                        labelText: 'Apply to Budget',
+                        prefixIcon: Icon(Icons.account_balance_wallet),
+                      ),
+                      items: [
+                        const DropdownMenuItem<Budget>(
+                          value: null,
+                          child: Text('No Budget'),
+                        ),
+                        ..._availableBudgets
+                            .where((b) => b.category == _category)
+                            .map((budget) {
+                          final amount = CurrencyFormatter.format(
+                              budget.amount, Currency.usd);
+                          return DropdownMenuItem<Budget>(
+                            value: budget,
+                            child: Text(
+                                '${budget.customCategory ?? budget.category.name} ($amount)'),
+                          );
+                        }).toList(),
+                      ],
+                      onChanged: (Budget? value) {
+                        setState(() {
+                          _selectedBudget = value;
+                        });
+                      },
+                    ),
+                  ],
+                  TextFormField(
+                    controller: _amountController,
+                    decoration: const InputDecoration(
+                      labelText: 'Amount',
+                      prefixText: '\$',
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter an amount';
+                      }
+                      if (double.tryParse(value) == null) {
+                        return 'Please enter a valid number';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: AppConstants.paddingMedium),
+
+                  // Category
+                  DropdownButtonFormField<TransactionCategory>(
+                    value: _category,
+                    decoration: const InputDecoration(
+                      labelText: 'Category',
+                      prefixIcon: Icon(Icons.category),
+                    ),
+                    items: _type == TransactionType.expense
+                        ? [
+                            TransactionCategory.food,
+                            TransactionCategory.shopping,
+                            TransactionCategory.entertainment,
+                            TransactionCategory.utilities,
+                            TransactionCategory.transportation,
+                            TransactionCategory.health,
+                            TransactionCategory.education,
+                            TransactionCategory.travel,
+                            TransactionCategory.housing,
+                            TransactionCategory.gifts,
+                          ].map((category) {
+                            return DropdownMenuItem(
+                              value: category,
+                              child: Text(category.toString().split('.').last),
+                            );
+                          }).toList()
+                        : [
+                            TransactionCategory.salary,
+                            TransactionCategory.business,
+                            TransactionCategory.investment,
+                            TransactionCategory.freelance,
+                          ].map((category) {
+                            return DropdownMenuItem(
+                              value: category,
+                              child: Text(category.toString().split('.').last),
+                            );
+                          }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _category = value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: AppConstants.paddingMedium),
+
+                  // Custom Source Field (for 'other' category)
+                  if (_category == TransactionCategory.other) ...[
+                    TextFormField(
+                      controller: _sourceController,
+                      decoration: const InputDecoration(
+                        labelText: 'Source',
+                        hintText: 'Enter source of income/expense',
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter the source';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: AppConstants.paddingMedium),
+                  ],
+
+                  // Date
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Date'),
+                    subtitle: Text(
+                      '${_date.day}/${_date.month}/${_date.year}',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate: _date,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) {
+                        setState(() => _date = picked);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: AppConstants.paddingMedium),
+
+                  // Notes
+                  TextFormField(
+                    controller: _notesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Notes',
+                      alignLabelWithHint: true,
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: AppConstants.paddingMedium),
+
+                  // Receipt Image
+                  Card(
+                    child: InkWell(
+                      onTap: _pickImage,
+                      child: Container(
+                        height: 200,
+                        alignment: Alignment.center,
+                        child: _receiptImage != null
+                            ? Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  Image.file(
+                                    _receiptImage!,
+                                    fit: BoxFit.cover,
+                                  ),
+                                  Positioned(
+                                    right: 8,
+                                    top: 8,
+                                    child: IconButton(
+                                      icon: const Icon(Icons.close),
+                                      onPressed: () {
+                                        setState(() => _receiptImage = null);
+                                      },
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(Icons.camera_alt, size: 48),
+                                  SizedBox(height: 8),
+                                  Text('Add Receipt'),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ),
+
+                  // Is Recurring
+                  SwitchListTile(
+                    title: const Text('Recurring Transaction'),
+                    value: _isRecurring,
+                    onChanged: (bool value) {
+                      setState(() => _isRecurring = value);
+                    },
+                  ),
+                ],
+              ),
+            ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppConstants.paddingLarge),
+          child: FilledButton(
+            onPressed: _isLoading ? null : _saveTransaction,
+            child: _isLoading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text('Save'),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _deleteTransaction() async {
@@ -235,7 +481,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       return;
     }
 
-    setState(() => _isSaving = true);
+    setState(() => _isLoading = true);
 
     try {
       await TransactionService.instance
@@ -258,252 +504,18 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isSaving = false);
+        setState(() => _isLoading = false);
       }
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.transaction == null
-            ? 'Add Transaction'
-            : 'Edit Transaction'),
-        actions: [
-          if (widget.transaction != null)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: _isSaving ? null : _deleteTransaction,
-            ),
-        ],
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(AppConstants.paddingLarge),
-          children: [
-            // Transaction Type
-            SegmentedButton<TransactionType>(
-              segments: const [
-                ButtonSegment(
-                  value: TransactionType.expense,
-                  label: Text('Expense'),
-                  icon: Icon(Icons.remove_circle_outline),
-                ),
-                ButtonSegment(
-                  value: TransactionType.income,
-                  label: Text('Income'),
-                  icon: Icon(Icons.add_circle_outline),
-                ),
-              ],
-              selected: {_type},
-              onSelectionChanged: (Set<TransactionType> selected) {
-                setState(() {
-                  _type = selected.first;
-                  // Reset category when switching type
-                  _category = TransactionCategory.other;
-                });
-              },
-            ),
-            const SizedBox(height: AppConstants.paddingLarge),
-
-            // Amount
-            if (_type == TransactionType.expense &&
-                _availableBudgets.isNotEmpty) ...[
-              const SizedBox(height: AppConstants.paddingMedium),
-              DropdownButtonFormField<Budget>(
-                value: _selectedBudget,
-                decoration: const InputDecoration(
-                  labelText: 'Apply to Budget',
-                  prefixIcon: Icon(Icons.account_balance_wallet),
-                ),
-                items: [
-                  const DropdownMenuItem<Budget>(
-                    value: null,
-                    child: Text('No Budget'),
-                  ),
-                  ..._availableBudgets
-                      .where((b) => b.category == _category)
-                      .map((budget) {
-                    final amount =
-                        CurrencyFormatter.format(budget.amount, Currency.usd);
-                    return DropdownMenuItem<Budget>(
-                      value: budget,
-                      child: Text(
-                          '${budget.customCategory ?? budget.category.name} ($amount)'),
-                    );
-                  }).toList(),
-                ],
-                onChanged: (Budget? value) {
-                  setState(() {
-                    _selectedBudget = value;
-                  });
-                },
-              ),
-            ],
-            TextFormField(
-              controller: _amountController,
-              decoration: const InputDecoration(
-                labelText: 'Amount',
-                prefixText: '\$',
-              ),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter an amount';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Please enter a valid number';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: AppConstants.paddingMedium),
-
-            // Category
-            DropdownButtonFormField<TransactionCategory>(
-              value: _category,
-              decoration: const InputDecoration(
-                labelText: 'Category',
-              ),
-              items: TransactionCategory.values
-                  .where((category) =>
-                      category == TransactionCategory.other ||
-                      (_type == TransactionType.expense
-                          ? category != TransactionCategory.salary &&
-                              category != TransactionCategory.freelance &&
-                              category != TransactionCategory.business
-                          : category == TransactionCategory.salary ||
-                              category == TransactionCategory.freelance ||
-                              category == TransactionCategory.business))
-                  .map((category) => DropdownMenuItem(
-                        value: category,
-                        child: Text(category.name),
-                      ))
-                  .toList(),
-              onChanged: (TransactionCategory? value) {
-                if (value != null) {
-                  setState(() => _category = value);
-                }
-              },
-            ),
-            const SizedBox(height: AppConstants.paddingMedium),
-
-            // Custom Source Field (for 'other' category)
-            if (_category == TransactionCategory.other) ...[
-              TextFormField(
-                controller: _sourceController,
-                decoration: const InputDecoration(
-                  labelText: 'Source',
-                  hintText: 'Enter source of income/expense',
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter the source';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: AppConstants.paddingMedium),
-            ],
-
-            // Date
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Date'),
-              subtitle: Text(
-                '${_date.day}/${_date.month}/${_date.year}',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              trailing: const Icon(Icons.calendar_today),
-              onTap: () async {
-                final DateTime? picked = await showDatePicker(
-                  context: context,
-                  initialDate: _date,
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime.now(),
-                );
-                if (picked != null) {
-                  setState(() => _date = picked);
-                }
-              },
-            ),
-            const SizedBox(height: AppConstants.paddingMedium),
-
-            // Notes
-            TextFormField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Notes',
-                alignLabelWithHint: true,
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: AppConstants.paddingMedium),
-
-            // Receipt Image
-            Card(
-              child: InkWell(
-                onTap: _pickImage,
-                child: Container(
-                  height: 200,
-                  alignment: Alignment.center,
-                  child: _receiptImage != null
-                      ? Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Image.file(
-                              _receiptImage!,
-                              fit: BoxFit.cover,
-                            ),
-                            Positioned(
-                              right: 8,
-                              top: 8,
-                              child: IconButton(
-                                icon: const Icon(Icons.close),
-                                onPressed: () {
-                                  setState(() => _receiptImage = null);
-                                },
-                                style: IconButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      : Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.camera_alt, size: 48),
-                            SizedBox(height: 8),
-                            Text('Add Receipt'),
-                          ],
-                        ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppConstants.paddingLarge),
-          child: FilledButton(
-            onPressed: _isSaving ? null : _saveTransaction,
-            child: _isSaving
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                    ),
-                  )
-                : const Text('Save'),
-          ),
-        ),
-      ),
-    );
+  void _onTypeChanged(Set<TransactionType> selected) {
+    setState(() {
+      _type = selected.first;
+      // Set default category based on type
+      _category = _type == TransactionType.expense
+          ? TransactionCategory.food
+          : TransactionCategory.salary;
+    });
   }
 }

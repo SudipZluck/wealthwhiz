@@ -4,6 +4,7 @@ import '../models/models.dart';
 import '../widgets/widgets.dart';
 import '../widgets/spending_charts.dart';
 import 'transactions_screen.dart';
+import 'all_transactions_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -162,7 +163,7 @@ class DashboardScreen extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const TransactionsScreen(),
+                              builder: (context) => AllTransactionsScreen(),
                             ),
                           );
                         },

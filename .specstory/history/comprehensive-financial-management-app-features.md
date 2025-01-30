@@ -30609,6 +30609,3897 @@ Let me help you fix the issue where your added transactions are not showing up i
 _**Assistant**_
 
 ```
+                  // Balance Card
+                  CustomCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const CustomCardHeader(
+                          title: 'Total Balance',
+                          subtitle: 'Available balance',
+                        ),
+                        const SizedBox(height: AppConstants.paddingMedium),
+                        Text(
+                          CurrencyFormatter.format(
+                            _transactions.fold(0.0, (sum, t) => 
+                              sum + (t.type == TransactionType.income ? t.amount : -t.amount)
+                            ),
+                            Currency.usd
+                          ),
+                          style: AppConstants.headlineLarge.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: AppConstants.paddingMedium),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildStatCard(
+                                context,
+                                'Income',
+                                CurrencyFormatter.format(
+                                  _transactions
+                                      .where((t) => t.type == TransactionType.income)
+                                      .fold(0.0, (sum, t) => sum + t.amount),
+                                  Currency.usd
+                                ),
+                                Icons.arrow_upward,
+                                Colors.green,
+                              ),
+                            ),
+                            const SizedBox(width: AppConstants.paddingMedium),
+                            Expanded(
+                              child: _buildStatCard(
+                                context,
+                                'Expenses',
+                                CurrencyFormatter.format(
+                                  _transactions
+                                      .where((t) => t.type == TransactionType.expense)
+                                      .fold(0.0, (sum, t) => sum + t.amount),
+                                  Currency.usd
+                                ),
+                                Icons.arrow_downward,
+                                Colors.red,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.paddingMedium),
+
+                  // Spending Charts
+                  SpendingCharts(
+                    transactions: _transactions,
+                    totalSpent: _transactions
+                        .where((t) => t.type == TransactionType.expense)
+                        .fold(0.0, (sum, t) => sum + t.amount),
+                    categorySpending: _transactions
+                        .where((t) => t.type == TransactionType.expense)
+                        .fold({}, (Map<TransactionCategory, double> map, t) {
+                      map[t.category] = (map[t.category] ?? 0) + t.amount;
+                      return map;
+                    }),
+                  ),
+                  const SizedBox(height: AppConstants.paddingMedium),
+
+                  // Recent Transactions
+                  CustomCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CustomCardHeader(
+                          title: 'All Transactions',
+                          subtitle: '${_transactions.length} transactions',
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const TransactionsScreen(),
+                                  ),
+                                ).then((value) {
+                                  if (value == true) {
+                                    _loadData(); // Reload data when returning from TransactionsScreen
+                                  }
+                                });
+                              },
+                              child: const Text('See All'),
+                            ),
+                          ],
+                        ),
+                        if (_transactions.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.all(AppConstants.paddingMedium),
+                            child: Center(
+                              child: Text('No transactions found'),
+                            ),
+                          )
+                        else
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _transactions.length,
+                            itemBuilder: (context, index) {
+                              final sortedTransactions = List<Transaction>.from(_transactions)
+                                ..sort((a, b) => b.date.compareTo(a.date));
+                              final transaction = sortedTransactions[index];
+                              
+                              return Card(
+                                margin: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                  horizontal: AppConstants.paddingSmall,
+                                ),
+                                child: ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                                    child: Icon(
+                                      _getTransactionIcon(transaction.category),
+                                      color: theme.colorScheme.primary,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  title: Text(transaction.description),
+                                  subtitle: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        DateFormatter.format(transaction.date),
+                                        style: AppConstants.bodySmall,
+                                      ),
+                                      Text(
+                                        transaction.category.toString().split('.').last,
+                                        style: AppConstants.bodySmall.copyWith(
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  trailing: Text(
+                                    transaction.type == TransactionType.income
+                                        ? '+${CurrencyFormatter.format(transaction.amount, Currency.usd)}'
+                                        : CurrencyFormatter.format(transaction.amount, Currency.usd),
+                                    style: AppConstants.titleMedium.copyWith(
+                                      color: transaction.type == TransactionType.income
+                                          ? Colors.green
+                                          : Colors.red,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+```
+
+---
+
+_**Assistant**_
+
+```
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _transactions.length,
+                            itemBuilder: (context, index) {
+                              final sortedTransactions = List<Transaction>.from(_transactions)
+                                ..sort((a, b) => b.date.compareTo(a.date));
+                              final transaction = sortedTransactions[index];
+                              
+                              return Card(
+                                margin: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                  horizontal: AppConstants.paddingSmall,
+                                ),
+                                child: ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                                    child: Icon(
+                                      _getTransactionIcon(transaction.category),
+                                      color: theme.colorScheme.primary,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  title: Text(transaction.description),
+                                  subtitle: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        DateFormatter.format(transaction.date),
+                                        style: AppConstants.bodySmall,
+                                      ),
+                                      Text(
+                                        transaction.category.toString().split('.').last,
+                                        style: AppConstants.bodySmall.copyWith(
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  trailing: Text(
+                                    transaction.type == TransactionType.income
+                                        ? '+${CurrencyFormatter.format(transaction.amount, Currency.usd)}'
+                                        : CurrencyFormatter.format(transaction.amount, Currency.usd),
+                                    style: AppConstants.titleMedium.copyWith(
+                                      color: transaction.type == TransactionType.income
+                                          ? Colors.green
+                                          : Colors.red,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+```
+
+---
+
+_**Assistant**_
+
+```
+                  // Recent Transactions
+                  CustomCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CustomCardHeader(
+                          title: 'All Transactions',
+                          subtitle: '${_transactions.length} transactions',
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const TransactionsScreen(),
+                                  ),
+                                ).then((value) {
+                                  if (value == true) {
+                                    _loadData(); // Reload data when returning from TransactionsScreen
+                                  }
+                                });
+                              },
+                              child: const Text('See All'),
+                            ),
+                          ],
+                        ),
+                        if (_transactions.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.all(AppConstants.paddingMedium),
+                            child: Center(
+                              child: Text('No transactions found'),
+                            ),
+                          )
+                        else
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _transactions.length,
+                            itemBuilder: (context, index) {
+                              final sortedTransactions = List<Transaction>.from(_transactions)
+                                ..sort((a, b) => b.date.compareTo(a.date));
+                              final transaction = sortedTransactions[index];
+                              
+                              return Card(
+                                margin: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                  horizontal: AppConstants.paddingSmall,
+                                ),
+                                child: ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                                    child: Icon(
+                                      _getTransactionIcon(transaction.category),
+                                      color: theme.colorScheme.primary,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  title: Text(transaction.description),
+                                  subtitle: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        DateFormatter.format(transaction.date),
+                                        style: AppConstants.bodySmall,
+                                      ),
+                                      Text(
+                                        transaction.category.toString().split('.').last,
+                                        style: AppConstants.bodySmall.copyWith(
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  trailing: Text(
+                                    transaction.type == TransactionType.income
+                                        ? '+${CurrencyFormatter.format(transaction.amount, Currency.usd)}'
+                                        : CurrencyFormatter.format(transaction.amount, Currency.usd),
+                                    style: AppConstants.titleMedium.copyWith(
+                                      color: transaction.type == TransactionType.income
+                                          ? Colors.green
+                                          : Colors.red,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+```
+
+---
+
+_**Assistant**_
+
+
+
+I've made several important changes to fix the transaction list and calculations:
+
+1. Fixed the transaction list display:
+   - Properly sorting transactions by date (newest first)
+   - Showing all transactions in the list
+   - Added proper card styling for each transaction
+   - Fixed the layout and spacing
+
+2. Fixed the balance calculations:
+   - Total Balance: Now correctly adds income and subtracts expenses
+   - Income: Shows sum of all income transactions
+   - Expenses: Shows sum of all expense transactions
+   - Spending Charts: Only shows expense transactions in categories
+
+3. Fixed data loading and updates:
+   - Transactions are loaded when the screen opens
+   - List updates when adding new transactions
+   - List updates when returning from the Transactions screen
+   - Added proper sorting of transactions
+
+4. Added debug logging to track data:
+   ```dart
+   print('Loaded ${transactions.length} transactions for user ${currentUser.id}');
+   ```
+
+If you're still not seeing your transactions, let's check:
+1. Is the data being loaded successfully? (Check the debug logs)
+2. Are the transactions being saved correctly in the database?
+3. Is the current user ID correct?
+
+Would you like me to add more detailed logging to help track down where the transactions might be getting lost?
+
+---
+
+_**User**_
+
+show all transactions which i am adding by add transaction screen in Transactions screen
+
+---
+
+_**Assistant**_
+
+I'll help you show all transactions in the Transactions screen. Let me update the `TransactionsScreen` to properly load and display all your saved transactions:
+
+---
+
+_**Assistant**_
+
+```
+import 'package:flutter/material.dart';
+import '../constants/constants.dart';
+import '../models/models.dart';
+import '../services/database_service.dart';
+import '../services/firebase_service.dart';
+import '../utils/currency_formatter.dart';
+import '../utils/date_formatter.dart';
+import '../widgets/widgets.dart';
+import 'transaction_form_screen.dart';
+
+class TransactionsScreen extends StatefulWidget {
+  const TransactionsScreen({Key? key}) : super(key: key);
+
+  @override
+  State<TransactionsScreen> createState() => _TransactionsScreenState();
+}
+
+class _TransactionsScreenState extends State<TransactionsScreen> {
+  List<Transaction> _transactions = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTransactions();
+  }
+
+  Future<void> _loadTransactions() async {
+    setState(() => _isLoading = true);
+    try {
+      final currentUser = FirebaseService().currentUser;
+      if (currentUser == null) {
+        throw Exception('No user logged in');
+      }
+
+      final databaseService = DatabaseService();
+      final transactions = await databaseService.getTransactions(currentUser.id);
+      print('Loaded ${transactions.length} transactions for user ${currentUser.id}'); // Debug log
+
+      if (mounted) {
+        setState(() {
+          _transactions = transactions..sort((a, b) => b.date.compareTo(a.date));
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading transactions: $e'); // Debug log
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load transactions: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      appBar: CustomAppBar(
+        title: 'Transactions',
+      ),
+      body: RefreshIndicator(
+        onRefresh: _loadTransactions,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _transactions.isEmpty
+                ? const Center(child: Text('No transactions found'))
+                : ListView.builder(
+                    padding: const EdgeInsets.all(AppConstants.paddingMedium),
+                    itemCount: _transactions.length,
+                    itemBuilder: (context, index) {
+                      final transaction = _transactions[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: AppConstants.paddingSmall),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                            child: Icon(
+                              _getTransactionIcon(transaction.category),
+                              color: theme.colorScheme.primary,
+                              size: 20,
+                            ),
+                          ),
+                          title: Text(transaction.description),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                DateFormatter.format(transaction.date),
+                                style: AppConstants.bodySmall,
+                              ),
+                              Text(
+                                transaction.category.toString().split('.').last,
+                                style: AppConstants.bodySmall.copyWith(
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          trailing: Text(
+                            transaction.type == TransactionType.income
+                                ? '+${CurrencyFormatter.format(transaction.amount, Currency.usd)}'
+                                : CurrencyFormatter.format(transaction.amount, Currency.usd),
+                            style: AppConstants.titleMedium.copyWith(
+                              color: transaction.type == TransactionType.income
+                                  ? Colors.green
+                                  : Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TransactionFormScreen(),
+            ),
+          );
+          if (result == true) {
+            _loadTransactions(); // Reload transactions after adding a new one
+          }
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Add Transaction'),
+      ),
+    );
+  }
+
+  IconData _getTransactionIcon(TransactionCategory category) {
+    switch (category) {
+      case TransactionCategory.food:
+        return Icons.restaurant;
+      case TransactionCategory.shopping:
+        return Icons.shopping_cart;
+      case TransactionCategory.entertainment:
+        return Icons.movie;
+      case TransactionCategory.utilities:
+        return Icons.power;
+      case TransactionCategory.transportation:
+        return Icons.directions_car;
+      case TransactionCategory.health:
+        return Icons.medical_services;
+      case TransactionCategory.education:
+        return Icons.school;
+      case TransactionCategory.salary:
+        return Icons.work;
+      case TransactionCategory.travel:
+        return Icons.flight;
+      case TransactionCategory.housing:
+        return Icons.home;
+      case TransactionCategory.investment:
+        return Icons.trending_up;
+      case TransactionCategory.freelance:
+        return Icons.computer;
+      case TransactionCategory.business:
+        return Icons.business;
+      case TransactionCategory.gifts:
+        return Icons.card_giftcard;
+      default:
+        return Icons.attach_money;
+    }
+  }
+}
+```
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+I've updated the Transactions screen to properly show all your saved transactions. Here are the key changes:
+
+1. Added proper data loading:
+   ```dart
+   Future<void> _loadTransactions() async {
+     // Get current user
+     final currentUser = FirebaseService().currentUser;
+     // Load transactions from database
+     final transactions = await databaseService.getTransactions(currentUser.id);
+     // Sort by date (newest first)
+     _transactions = transactions..sort((a, b) => b.date.compareTo(a.date));
+   }
+   ```
+
+2. Added automatic updates:
+   - Loads transactions when screen opens
+   - Reloads after adding a new transaction
+   - Pull-to-refresh support
+   - Loading indicator while fetching data
+
+3. Improved transaction display:
+   - Shows all transactions sorted by date
+   - Each transaction shows:
+     - Category icon
+     - Description
+     - Date
+     - Category name
+     - Amount (color-coded for income/expense)
+   - Card layout with proper spacing
+
+4. Added proper error handling:
+   - Shows error messages if loading fails
+   - Shows "No transactions found" when empty
+   - Debug logging to track data loading
+
+5. Added "Add Transaction" button:
+   - Opens transaction form screen
+   - Reloads transactions after adding new one
+
+The transactions should now appear in the list as soon as you add them. If you're still not seeing your transactions, let's check:
+1. Are the transactions being saved correctly? (Check the debug logs)
+2. Is the current user ID correct?
+3. Is the database service working properly?
+
+Would you like me to add more detailed logging to help track where the transactions might be getting lost?
+
+---
+
+_**User**_
+
+i am adding transaction it's also store in firestore but not showing in transaction screen
+
+---
+
+_**Assistant**_
+
+Let me help you fix the issue where transactions are stored in Firestore but not showing up in the Transactions screen. Let's add more detailed logging and fix the data loading:
+
+---
+
+_**Assistant**_
+
+```
+  Future<void> _loadTransactions() async {
+    setState(() => _isLoading = true);
+    try {
+      final currentUser = FirebaseService().currentUser;
+      print('Current user: ${currentUser?.id}'); // Debug log for user ID
+
+      if (currentUser == null) {
+        throw Exception('No user logged in');
+      }
+
+      final databaseService = DatabaseService();
+      print('Fetching transactions for user ${currentUser.id}...'); // Debug log before fetch
+
+      final transactions = await databaseService.getTransactions(currentUser.id);
+      print('Raw transactions data: $transactions'); // Debug log raw data
+      print('Loaded ${transactions.length} transactions for user ${currentUser.id}'); // Debug log count
+
+      if (mounted) {
+        // Sort transactions by date (newest first)
+        final sortedTransactions = List<Transaction>.from(transactions)
+          ..sort((a, b) => b.date.compareTo(a.date));
+        
+        print('Sorted transactions: ${sortedTransactions.map((t) => '${t.description}: ${t.amount}')}'); // Debug sorted data
+
+        setState(() {
+          _transactions = sortedTransactions;
+          _isLoading = false;
+        });
+      }
+    } catch (e, stackTrace) {
+      print('Error loading transactions: $e'); // Debug log error
+      print('Stack trace: $stackTrace'); // Debug log stack trace
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load transactions: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: _loadTransactions,
+              textColor: Colors.white,
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      appBar: CustomAppBar(
+        title: 'Transactions',
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadTransactions,
+            tooltip: 'Refresh transactions',
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: _loadTransactions,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _transactions.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('No transactions found'),
+                        const SizedBox(height: AppConstants.paddingMedium),
+                        ElevatedButton(
+                          onPressed: _loadTransactions,
+                          child: const Text('Refresh'),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(AppConstants.paddingMedium),
+                    itemCount: _transactions.length,
+                    itemBuilder: (context, index) {
+                      final transaction = _transactions[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: AppConstants.paddingSmall),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                            child: Icon(
+                              _getTransactionIcon(transaction.category),
+                              color: theme.colorScheme.primary,
+                              size: 20,
+                            ),
+                          ),
+                          title: Text(transaction.description),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                DateFormatter.format(transaction.date),
+                                style: AppConstants.bodySmall,
+                              ),
+                              Text(
+                                transaction.category.toString().split('.').last,
+                                style: AppConstants.bodySmall.copyWith(
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          trailing: Text(
+                            transaction.type == TransactionType.income
+                                ? '+${CurrencyFormatter.format(transaction.amount, Currency.usd)}'
+                                : CurrencyFormatter.format(transaction.amount, Currency.usd),
+                            style: AppConstants.titleMedium.copyWith(
+                              color: transaction.type == TransactionType.income
+                                  ? Colors.green
+                                  : Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TransactionFormScreen(),
+            ),
+          );
+          if (result == true) {
+            print('Transaction added, reloading data...'); // Debug log
+            await _loadTransactions(); // Reload transactions after adding a new one
+          }
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Add Transaction'),
+      ),
+    );
+  }
+```
+
+---
+
+_**Assistant**_
+
+```
+  Future<List<Transaction>> getTransactions(String userId) async {
+    try {
+      print('Fetching transactions from Firestore for user: $userId'); // Debug log
+
+      final snapshot = await _firestore
+          .collection('transactions')
+          .where('userId', isEqualTo: userId)
+          .orderBy('date', descending: true)
+          .get();
+
+      print('Firestore query completed. Found ${snapshot.docs.length} documents'); // Debug log
+
+      final transactions = snapshot.docs.map((doc) {
+        final data = doc.data();
+        print('Transaction data from Firestore: $data'); // Debug log raw data
+        
+        return Transaction.fromMap({
+          'id': doc.id,
+          ...data,
+        });
+      }).toList();
+
+      print('Parsed ${transactions.length} transactions'); // Debug log
+      transactions.forEach((t) => print('Parsed transaction: ${t.description} - ${t.amount}')); // Debug each transaction
+
+      return transactions;
+    } catch (e, stackTrace) {
+      print('Error fetching transactions: $e'); // Debug log error
+      print('Stack trace: $stackTrace'); // Debug log stack trace
+      rethrow;
+    }
+  }
+```
+
+---
+
+_**Assistant**_
+
+
+
+I've made several changes to help diagnose and fix the issue:
+
+1. Updated the `DatabaseService` to properly fetch from Firestore:
+   ```dart
+   final snapshot = await _firestore
+       .collection('transactions')
+       .where('userId', isEqualTo: userId)
+       .orderBy('date', descending: true)
+       .get();
+   ```
+
+2. Added extensive logging throughout the process:
+   - When fetching transactions:
+     ```dart
+     print('Fetching transactions from Firestore for user: $userId');
+     print('Firestore query completed. Found ${snapshot.docs.length} documents');
+     ```
+   - For each transaction:
+     ```dart
+     print('Transaction data from Firestore: $data');
+     print('Parsed transaction: ${t.description} - ${t.amount}');
+     ```
+   - When loading in the UI:
+     ```dart
+     print('Current user: ${currentUser?.id}');
+     print('Raw transactions data: $transactions');
+     print('Sorted transactions: ${sortedTransactions.map(...)}');
+     ```
+
+3. Added better error handling and UI feedback:
+   - Added a refresh button in the app bar
+   - Added a retry button in error messages
+   - Added a refresh button when no transactions are found
+   - Improved error messages with stack traces
+
+4. Improved the transaction loading process:
+   - Properly sorting transactions by date
+   - Better state management
+   - Proper error handling
+   - Automatic refresh after adding transactions
+
+To fix the issue:
+1. Check the debug logs in the console to see:
+   - If the current user ID is correct
+   - If Firestore is being queried correctly
+   - If transactions are being parsed properly
+2. Try using the refresh button in the app bar
+3. Check if new transactions appear after adding them
+
+Would you like me to add any additional logging or make any other changes to help track down the issue?
+
+---
+
+_**User**_
+
+flutter: Error loading transactions: [cloud_firestore/failed-precondition] The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/testfb1237/firestore/indexes?create_composite=Ck9wcm9qZWN0cy90ZXN0ZmIxMjM3L2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy90cmFuc2FjdGlvbnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaCAoEZGF0ZRACGgwKCF9fbmFtZV9fEAI
+
+---
+
+_**Assistant**_
+
+Ah, I see the issue! The error is happening because Firestore needs a composite index for the query we're using (filtering by userId and ordering by date). Let's fix this in two ways:
+
+1. First, let's modify the query temporarily to work without an index while you create the required index:
+
+---
+
+_**Assistant**_
+
+```
+  Future<List<models.Transaction>> getTransactions(String userId) async {
+    try {
+      print('Fetching transactions from Firestore for user: $userId'); // Debug log
+
+      // Temporarily remove the orderBy clause to make it work without index
+      final snapshot = await _firestore
+          .collection('transactions')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      print('Firestore query completed. Found ${snapshot.docs.length} documents'); // Debug log
+
+      final transactions = snapshot.docs.map((doc) {
+        final data = doc.data();
+        print('Transaction data from Firestore: $data'); // Debug log raw data
+
+        return models.Transaction.fromMap({
+          'id': doc.id,
+          ...data,
+        });
+      }).toList();
+
+      // Sort the transactions in memory instead
+      transactions.sort((a, b) => b.date.compareTo(a.date));
+
+      print('Parsed ${transactions.length} transactions'); // Debug log
+      transactions.forEach((t) => print(
+          'Parsed transaction: ${t.description} - ${t.amount}')); // Debug each transaction
+
+      return transactions;
+    } catch (e, stackTrace) {
+      print('Error fetching transactions: $e'); // Debug log error
+      print('Stack trace: $stackTrace'); // Debug log stack trace
+      rethrow;
+    }
+  }
+```
+
+---
+
+_**Assistant**_
+
+
+
+2. Now, you need to create the required index in Firebase. Please follow these steps:
+
+1. Click on the link from the error message to create the index:
+   ```
+   https://console.firebase.google.com/v1/r/project/testfb1237/firestore/indexes?create_composite=Ck9wcm9qZWN0cy90ZXN0ZmIxMjM3L2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy90cmFuc2FjdGlvbnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaCAoEZGF0ZRACGgwKCF9fbmFtZV9fEAI
+   ```
+
+2. In the Firebase Console:
+   - This will take you to the index creation page
+   - The index should be pre-configured for:
+     - Collection: `transactions`
+     - Fields: `userId` Ascending, `date` Descending
+   - Click "Create Index"
+   - Wait for the index to finish building (it may take a few minutes)
+
+3. Once the index is built, we can update the code back to use the more efficient query:
+
+---
+
+_**Assistant**_
+
+```
+  Future<List<models.Transaction>> getTransactions(String userId) async {
+    try {
+      print('Fetching transactions from Firestore for user: $userId'); // Debug log
+
+      // Using the composite index for efficient querying
+      final snapshot = await _firestore
+          .collection('transactions')
+          .where('userId', isEqualTo: userId)
+          .orderBy('date', descending: true)
+          .get();
+
+      print('Firestore query completed. Found ${snapshot.docs.length} documents'); // Debug log
+
+      final transactions = snapshot.docs.map((doc) {
+        final data = doc.data();
+        print('Transaction data from Firestore: $data'); // Debug log raw data
+
+        return models.Transaction.fromMap({
+          'id': doc.id,
+          ...data,
+        });
+      }).toList();
+
+      print('Parsed ${transactions.length} transactions'); // Debug log
+      transactions.forEach((t) => print(
+          'Parsed transaction: ${t.description} - ${t.amount}')); // Debug each transaction
+
+      return transactions;
+    } catch (e, stackTrace) {
+      if (e.toString().contains('requires an index')) {
+        print('Index not ready yet, falling back to client-side sorting');
+        // Fallback to querying without ordering
+        final snapshot = await _firestore
+            .collection('transactions')
+            .where('userId', isEqualTo: userId)
+            .get();
+
+        final transactions = snapshot.docs.map((doc) {
+          final data = doc.data();
+          return models.Transaction.fromMap({
+            'id': doc.id,
+            ...data,
+          });
+        }).toList()
+          ..sort((a, b) => b.date.compareTo(a.date));
+
+        return transactions;
+      }
+      print('Error fetching transactions: $e'); // Debug log error
+      print('Stack trace: $stackTrace'); // Debug log stack trace
+      rethrow;
+    }
+  }
+```
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+I've made the following changes to fix the issue:
+
+1. Added a temporary solution that will work immediately:
+   - Removed the `orderBy` clause from the Firestore query
+   - Added client-side sorting of transactions
+   - This will let you see your transactions while the index builds
+
+2. Added a fallback mechanism that:
+   - Tries to use the index-based query first
+   - Falls back to client-side sorting if the index isn't ready
+   - Provides detailed error logging
+
+3. Added instructions to create the required Firestore index:
+   - Click the link from the error message
+   - Create an index for:
+     - Collection: `transactions`
+     - Field 1: `userId` (Ascending)
+     - Field 2: `date` (Descending)
+
+Your transactions should now appear in the list. The steps are:
+
+1. The code will work immediately using client-side sorting
+2. Create the index using the provided link
+3. Wait a few minutes for the index to build
+4. The app will automatically switch to using the more efficient indexed query
+
+Would you like me to add any additional error handling or logging to help track the data flow?
+
+---
+
+_**User**_
+
+by adding transaction also add in local storage with firebase
+
+---
+
+_**Assistant**_
+
+I see the issue. We need to save transactions to both Firestore and local SQLite storage. Let's modify the `insertTransaction` method to handle both:
+
+---
+
+_**Assistant**_
+
+```
+  Future<models.Transaction> insertTransaction(models.Transaction transaction) async {
+    try {
+      print('Saving transaction to Firestore and local storage: ${transaction.description}'); // Debug log
+
+      // Save to Firestore
+      final docRef = await _firestore.collection('transactions').add(transaction.toMap());
+      final transactionWithId = models.Transaction.fromMap({
+        'id': docRef.id,
+        ...transaction.toMap(),
+      });
+
+      print('Saved to Firestore with ID: ${docRef.id}'); // Debug log
+
+      // Save to local SQLite database
+      final db = await database;
+      await db.insert(
+        'transactions',
+        transactionWithId.toMap()..['isSynced'] = 1, // Mark as synced since we just saved to Firestore
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+      print('Saved to local database'); // Debug log
+      return transactionWithId;
+    } catch (e, stackTrace) {
+      print('Error saving transaction: $e'); // Debug log error
+      print('Stack trace: $stackTrace'); // Debug log stack trace
+      
+      // If Firestore fails, save to local database only with isSynced = 0
+      if (e.toString().contains('network')) {
+        print('Network error, saving to local database only'); // Debug log
+        final db = await database;
+        await db.insert(
+          'transactions',
+          transaction.toMap()..['isSynced'] = 0,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        return transaction;
+      }
+      rethrow;
+    }
+  }
+
+  // Add a method to sync unsynced transactions
+  Future<void> syncUnsyncedTransactions() async {
+    try {
+      final db = await database;
+      final List<Map<String, dynamic>> unsyncedTransactions = await db.query(
+        'transactions',
+        where: 'isSynced = ?',
+        whereArgs: [0],
+      );
+
+      print('Found ${unsyncedTransactions.length} unsynced transactions'); // Debug log
+
+      for (final transactionMap in unsyncedTransactions) {
+        final transaction = models.Transaction.fromMap(transactionMap);
+        
+        // Save to Firestore
+        final docRef = await _firestore.collection('transactions').add(transaction.toMap());
+        
+        // Update local record with Firestore ID and mark as synced
+        await db.update(
+          'transactions',
+          {
+            'id': docRef.id,
+            'isSynced': 1,
+          },
+          where: 'id = ?',
+          whereArgs: [transaction.id],
+        );
+
+        print('Synced transaction: ${transaction.description}'); // Debug log
+      }
+    } catch (e, stackTrace) {
+      print('Error syncing transactions: $e'); // Debug log error
+      print('Stack trace: $stackTrace'); // Debug log stack trace
+      rethrow;
+    }
+  }
+
+  // Update getTransactions to merge local and Firestore data
+  Future<List<models.Transaction>> getTransactions(String userId) async {
+    try {
+      print('Fetching transactions from both Firestore and local storage'); // Debug log
+
+      // Get transactions from Firestore
+      final firestoreSnapshot = await _firestore
+          .collection('transactions')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      final firestoreTransactions = firestoreSnapshot.docs.map((doc) {
+        return models.Transaction.fromMap({
+          'id': doc.id,
+          ...doc.data(),
+        });
+      }).toList();
+
+      print('Fetched ${firestoreTransactions.length} transactions from Firestore'); // Debug log
+
+      // Get transactions from local database
+      final db = await database;
+      final List<Map<String, dynamic>> localTransactions = await db.query(
+        'transactions',
+        where: 'userId = ? AND isSynced = ?',
+        whereArgs: [userId, 0],
+      );
+
+      print('Fetched ${localTransactions.length} unsynced transactions from local storage'); // Debug log
+
+      // Combine both lists
+      final allTransactions = [
+        ...firestoreTransactions,
+        ...localTransactions.map((t) => models.Transaction.fromMap(t)),
+      ]..sort((a, b) => b.date.compareTo(a.date));
+
+      print('Total transactions: ${allTransactions.length}'); // Debug log
+      return allTransactions;
+    } catch (e, stackTrace) {
+      print('Error fetching transactions: $e'); // Debug log error
+      print('Stack trace: $stackTrace'); // Debug log stack trace
+      
+      // If Firestore fails, fallback to local data only
+      if (e.toString().contains('network')) {
+        print('Network error, falling back to local data only'); // Debug log
+        final db = await database;
+        final List<Map<String, dynamic>> localTransactions = await db.query(
+          'transactions',
+          where: 'userId = ?',
+          whereArgs: [userId],
+        );
+        return localTransactions
+            .map((t) => models.Transaction.fromMap(t))
+            .toList()
+          ..sort((a, b) => b.date.compareTo(a.date));
+      }
+      rethrow;
+    }
+  }
+```
+
+---
+
+_**Assistant**_
+
+```
+  Future<models.Transaction> insertTransaction(models.Transaction transaction) async {
+    try {
+      print('Saving transaction to Firestore and local storage: ${transaction.description}'); // Debug log
+
+      // Save to Firestore first
+      final docRef = await _firestore.collection('transactions').add(transaction.toMap());
+      
+      // Create updated transaction with Firestore ID
+      final transactionWithId = models.Transaction.fromMap({
+        'id': docRef.id,
+        ...transaction.toMap(),
+      });
+
+      print('Saved to Firestore with ID: ${docRef.id}'); // Debug log
+
+      // Save to local SQLite database
+      final db = await database;
+      await db.insert(
+        'transactions',
+        transactionWithId.toMap()..['isSynced'] = 1, // Mark as synced
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+      print('Saved to local database'); // Debug log
+      return transactionWithId;
+    } catch (e, stackTrace) {
+      print('Error saving transaction: $e'); // Debug log error
+      print('Stack trace: $stackTrace'); // Debug log stack trace
+
+      // If Firestore fails, save to local database only
+      final db = await database;
+      await db.insert(
+        'transactions',
+        transaction.toMap()..['isSynced'] = 0, // Mark as not synced
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      
+      print('Saved to local database only (not synced)'); // Debug log
+      return transaction;
+    }
+  }
+```
+
+---
+
+_**Assistant**_
+
+
+
+Now let's update the `getTransactions` method to fetch from both sources:
+
+---
+
+_**Assistant**_
+
+```
+  Future<List<models.Transaction>> getTransactions(String userId) async {
+    try {
+      print('Fetching transactions from both Firestore and local storage'); // Debug log
+
+      // Get transactions from Firestore
+      final firestoreSnapshot = await _firestore
+          .collection('transactions')
+          .where('userId', isEqualTo: userId)
+          .orderBy('date', descending: true)
+          .get();
+
+      final firestoreTransactions = firestoreSnapshot.docs.map((doc) {
+        return models.Transaction.fromMap({
+          'id': doc.id,
+          ...doc.data(),
+        });
+      }).toList();
+
+      print('Fetched ${firestoreTransactions.length} transactions from Firestore'); // Debug log
+
+      // Get unsynced transactions from local database
+      final db = await database;
+      final List<Map<String, dynamic>> localTransactions = await db.query(
+        'transactions',
+        where: 'userId = ? AND isSynced = ?',
+        whereArgs: [userId, 0],
+      );
+
+      print('Fetched ${localTransactions.length} unsynced transactions from local storage'); // Debug log
+
+      // Combine both lists and sort by date
+      final allTransactions = [
+        ...firestoreTransactions,
+        ...localTransactions.map((t) => models.Transaction.fromMap(t)),
+      ]..sort((a, b) => b.date.compareTo(a.date));
+
+      print('Total transactions: ${allTransactions.length}'); // Debug log
+      return allTransactions;
+    } catch (e, stackTrace) {
+      print('Error fetching transactions: $e'); // Debug log error
+      print('Stack trace: $stackTrace'); // Debug log stack trace
+
+      if (e.toString().contains('requires an index')) {
+        print('Index not ready yet, falling back to client-side sorting');
+        // Fallback to querying without ordering
+        final snapshot = await _firestore
+            .collection('transactions')
+            .where('userId', isEqualTo: userId)
+            .get();
+
+        final firestoreTransactions = snapshot.docs.map((doc) {
+          return models.Transaction.fromMap({
+            'id': doc.id,
+            ...doc.data(),
+          });
+        }).toList();
+
+        // Get unsynced transactions from local database
+        final db = await database;
+        final List<Map<String, dynamic>> localTransactions = await db.query(
+          'transactions',
+          where: 'userId = ? AND isSynced = ?',
+          whereArgs: [userId, 0],
+        );
+
+        // Combine and sort
+        final allTransactions = [
+          ...firestoreTransactions,
+          ...localTransactions.map((t) => models.Transaction.fromMap(t)),
+        ]..sort((a, b) => b.date.compareTo(a.date));
+
+        return allTransactions;
+      }
+
+      // If Firestore fails, fallback to local data only
+      print('Falling back to local data only'); // Debug log
+      final db = await database;
+      final List<Map<String, dynamic>> localTransactions = await db.query(
+        'transactions',
+        where: 'userId = ?',
+        whereArgs: [userId],
+      );
+
+      final transactions = localTransactions
+          .map((t) => models.Transaction.fromMap(t))
+          .toList()
+        ..sort((a, b) => b.date.compareTo(a.date));
+
+      print('Fetched ${transactions.length} transactions from local storage only'); // Debug log
+      return transactions;
+    }
+  }
+```
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+I've updated the code to handle transactions in both Firestore and local storage. Here's what's happening:
+
+1. When adding a transaction (`insertTransaction`):
+   ```dart
+   - First tries to save to Firestore
+   - Gets the Firestore document ID
+   - Saves to local SQLite with isSynced = 1
+   - If Firestore fails, saves to local only with isSynced = 0
+   ```
+
+2. When fetching transactions (`getTransactions`):
+   ```dart
+   - Fetches from both Firestore and local storage
+   - Gets synced transactions from Firestore
+   - Gets unsynced transactions from local storage
+   - Combines both lists and sorts by date
+   - Falls back to local-only if Firestore fails
+   ```
+
+3. Added detailed logging to track the data flow:
+   ```dart
+   - When saving to Firestore
+   - When saving to local storage
+   - When fetching from both sources
+   - Number of transactions from each source
+   - Any errors that occur
+   ```
+
+Now your transactions will:
+1. Save to both Firestore and local storage
+2. Work offline (saves locally if Firestore is unavailable)
+3. Show up immediately in the list
+4. Persist even if the app is closed
+
+The transactions should now appear in your list right after adding them. If you're still not seeing them, check the debug logs to see:
+1. If the transaction is being saved successfully
+2. If it's being saved to both Firestore and local storage
+3. If there are any errors during the save or fetch process
+
+Would you like me to add any additional error handling or logging to help track where the transactions are going?
+
+---
+
+_**User**_
+
+in firestore their is transactions collection & their this many transaction but not showing in transaction screen
+
+---
+
+_**Assistant**_
+
+Let me help you fix the issue where transactions in Firestore aren't showing up in the Transactions screen. Let's modify the `getTransactions` method to properly fetch and display the Firestore data:
+
+---
+
+_**Assistant**_
+
+```
+  Future<List<models.Transaction>> getTransactions(String userId) async {
+    try {
+      print('Starting to fetch transactions for user: $userId'); // Debug log
+
+      // Get transactions from Firestore
+      final firestoreSnapshot = await _firestore
+          .collection('transactions')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      print('Firestore raw data: ${firestoreSnapshot.docs.map((doc) => doc.data())}'); // Debug raw data
+
+      final firestoreTransactions = firestoreSnapshot.docs.map((doc) {
+        final data = doc.data();
+        print('Processing Firestore doc: ${doc.id} with data: $data'); // Debug each document
+        
+        // Convert Timestamp to DateTime
+        if (data['date'] is Timestamp) {
+          data['date'] = (data['date'] as Timestamp).toDate().toIso8601String();
+        }
+        if (data['createdAt'] is Timestamp) {
+          data['createdAt'] = (data['createdAt'] as Timestamp).toDate().toIso8601String();
+        }
+        if (data['updatedAt'] is Timestamp) {
+          data['updatedAt'] = (data['updatedAt'] as Timestamp).toDate().toIso8601String();
+        }
+
+        return models.Transaction.fromMap({
+          'id': doc.id,
+          ...data,
+        });
+      }).toList();
+
+      print('Processed Firestore transactions: ${firestoreTransactions.map((t) => '${t.description}: ${t.amount}')}'); // Debug processed data
+
+      // Sort by date (newest first)
+      firestoreTransactions.sort((a, b) => b.date.compareTo(a.date));
+
+      // Get local transactions
+      final db = await database;
+      final List<Map<String, dynamic>> localTransactions = await db.query(
+        'transactions',
+        where: 'userId = ? AND isSynced = ?',
+        whereArgs: [userId, 0],
+      );
+
+      print('Local transactions: ${localTransactions.length}'); // Debug local data
+
+      // Combine both lists
+      final allTransactions = [
+        ...firestoreTransactions,
+        ...localTransactions.map((t) => models.Transaction.fromMap(t)),
+      ];
+
+      print('Final transaction count: ${allTransactions.length}'); // Debug final count
+      allTransactions.forEach((t) => print('Transaction: ${t.description} - ${t.amount} - ${t.date}')); // Debug each transaction
+
+      return allTransactions;
+    } catch (e, stackTrace) {
+      print('Error fetching transactions: $e'); // Debug log error
+      print('Stack trace: $stackTrace'); // Debug log stack trace
+      rethrow;
+    }
+  }
+```
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+I've updated the `getTransactions` method to properly handle Firestore data and added extensive logging. The key changes are:
+
+1. Added proper Timestamp conversion:
+   ```dart
+   if (data['date'] is Timestamp) {
+     data['date'] = (data['date'] as Timestamp).toDate().toIso8601String();
+   }
+   ```
+   This fixes a common issue where Firestore Timestamps aren't properly converted to DateTime.
+
+2. Added detailed logging at each step:
+   ```dart
+   print('Starting to fetch transactions for user: $userId');
+   print('Firestore raw data: ${firestoreSnapshot.docs.map((doc) => doc.data())}');
+   print('Processing Firestore doc: ${doc.id} with data: $data');
+   ```
+   This will help us see exactly what data is coming from Firestore.
+
+3. Removed the orderBy clause that was causing index issues:
+   ```dart
+   final firestoreSnapshot = await _firestore
+       .collection('transactions')
+       .where('userId', isEqualTo: userId)
+       .get();
+   ```
+   We now sort the data in memory instead.
+
+To debug the issue:
+1. Check the logs to see:
+   - If the correct user ID is being used
+   - What raw data is coming from Firestore
+   - If the Timestamp conversion is working
+   - The final list of transactions
+
+2. Verify in Firebase Console:
+   - The transactions have the correct `userId` field
+   - The dates are stored as Timestamps
+   - The data structure matches what your Transaction model expects
+
+Would you like me to add any additional logging or make any other changes to help track down why the transactions aren't showing up?
+
+---
+
+_**User**_
+
+add transaction should save by user, to get transaction by that user
+
+---
+
+_**Assistant**_
+
+
+
+I see the issue. We need to make sure transactions are saved with the current user's ID. Let's modify the `insertTransaction` method to properly include the user ID:
+
+---
+
+_**Assistant**_
+
+```
+  Future<models.Transaction> insertTransaction(models.Transaction transaction) async {
+    try {
+      // Get current user ID
+      final currentUser = FirebaseService().currentUser;
+      if (currentUser == null) {
+        throw Exception('No user logged in');
+      }
+
+      print('Saving transaction for user: ${currentUser.id}'); // Debug log
+      print('Transaction data: ${transaction.toMap()}'); // Debug log
+
+      // Ensure transaction has the current user's ID
+      final transactionData = {
+        ...transaction.toMap(),
+        'userId': currentUser.id,
+        'createdAt': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+
+      print('Prepared transaction data: $transactionData'); // Debug log
+
+      // Save to Firestore first
+      final docRef = await _firestore.collection('transactions').add(transactionData);
+      print('Saved to Firestore with ID: ${docRef.id}'); // Debug log
+
+      // Create updated transaction with Firestore ID
+      final transactionWithId = models.Transaction.fromMap({
+        'id': docRef.id,
+        ...transactionData,
+      });
+
+      // Save to local SQLite database
+      final db = await database;
+      await db.insert(
+        'transactions',
+        transactionWithId.toMap()..['isSynced'] = 1, // Mark as synced
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+      print('Saved to local database with user ID: ${currentUser.id}'); // Debug log
+      return transactionWithId;
+    } catch (e, stackTrace) {
+      print('Error saving transaction: $e'); // Debug log error
+      print('Stack trace: $stackTrace'); // Debug log stack trace
+
+      // If Firestore fails, save to local database only
+      final db = await database;
+      final currentUser = FirebaseService().currentUser;
+      if (currentUser == null) {
+        throw Exception('No user logged in');
+      }
+
+      final transactionData = {
+        ...transaction.toMap(),
+        'userId': currentUser.id,
+        'createdAt': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+
+      await db.insert(
+        'transactions',
+        transactionData..['isSynced'] = 0, // Mark as not synced
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+      print('Saved to local database only (not synced) with user ID: ${currentUser.id}'); // Debug log
+      return models.Transaction.fromMap(transactionData);
+    }
+  }
+```
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+Now let's also update the `getTransactions` method to properly handle the user ID when fetching:
+
+---
+
+_**Assistant**_
+
+```
+  Future<List<models.Transaction>> getTransactions(String userId) async {
+    try {
+      print('Starting to fetch transactions for user: $userId'); // Debug log
+
+      // Get transactions from Firestore
+      final firestoreSnapshot = await _firestore
+          .collection('transactions')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      print('Found ${firestoreSnapshot.docs.length} transactions in Firestore for user: $userId'); // Debug log
+      firestoreSnapshot.docs.forEach((doc) {
+        print('Firestore transaction: ${doc.id} - ${doc.data()}'); // Debug each transaction
+      });
+
+      final firestoreTransactions = firestoreSnapshot.docs.map((doc) {
+        final data = doc.data();
+        
+        // Convert Timestamp to DateTime if needed
+        if (data['date'] is Timestamp) {
+          data['date'] = (data['date'] as Timestamp).toDate().toIso8601String();
+        }
+        if (data['createdAt'] is Timestamp) {
+          data['createdAt'] = (data['createdAt'] as Timestamp).toDate().toIso8601String();
+        }
+        if (data['updatedAt'] is Timestamp) {
+          data['updatedAt'] = (data['updatedAt'] as Timestamp).toDate().toIso8601String();
+        }
+
+        final transaction = models.Transaction.fromMap({
+          'id': doc.id,
+          ...data,
+        });
+        print('Processed transaction: ${transaction.description} - ${transaction.amount} - ${transaction.userId}'); // Debug processed transaction
+        return transaction;
+      }).toList();
+
+      // Get local transactions
+      final db = await database;
+      final List<Map<String, dynamic>> localTransactions = await db.query(
+        'transactions',
+        where: 'userId = ? AND isSynced = ?',
+        whereArgs: [userId, 0],
+      );
+
+      print('Found ${localTransactions.length} local transactions for user: $userId'); // Debug log
+
+      // Combine both lists
+      final allTransactions = [
+        ...firestoreTransactions,
+        ...localTransactions.map((t) => models.Transaction.fromMap(t)),
+      ]..sort((a, b) => b.date.compareTo(a.date)); // Sort by date (newest first)
+
+      print('Total transactions for user $userId: ${allTransactions.length}'); // Debug final count
+      allTransactions.forEach((t) => print('Final transaction: ${t.description} - ${t.amount} - ${t.userId}')); // Debug each transaction
+
+      return allTransactions;
+    } catch (e, stackTrace) {
+      print('Error fetching transactions: $e'); // Debug log error
+      print('Stack trace: $stackTrace'); // Debug log stack trace
+      rethrow;
+    }
+  }
+```
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+I've made several important changes to ensure transactions are properly saved and retrieved by user:
+
+1. Updated `insertTransaction` to properly handle user ID:
+   ```dart
+   // Get current user ID and ensure it exists
+   final currentUser = FirebaseService().currentUser;
+   if (currentUser == null) {
+     throw Exception('No user logged in');
+   }
+
+   // Add user ID and timestamps to transaction data
+   final transactionData = {
+     ...transaction.toMap(),
+     'userId': currentUser.id,
+     'createdAt': DateTime.now().toIso8601String(),
+     'updatedAt': DateTime.now().toIso8601String(),
+   };
+   ```
+
+2. Added better error handling and logging:
+   ```dart
+   print('Saving transaction for user: ${currentUser.id}');
+   print('Transaction data: ${transaction.toMap()}');
+   print('Prepared transaction data: $transactionData');
+   ```
+
+3. Updated `getTransactions` with better user ID filtering:
+   ```dart
+   // Get transactions from Firestore
+   final firestoreSnapshot = await _firestore
+       .collection('transactions')
+       .where('userId', isEqualTo: userId)
+       .get();
+   ```
+
+4. Added detailed logging to track transactions:
+   ```dart
+   print('Found ${firestoreSnapshot.docs.length} transactions in Firestore for user: $userId');
+   print('Processed transaction: ${transaction.description} - ${transaction.amount} - ${transaction.userId}');
+   ```
+
+Now when you:
+1. Add a transaction - it will be saved with your user ID
+2. View transactions - you'll only see transactions for your user ID
+3. The logs will show detailed information about the transactions being saved and loaded
+
+The transactions should now appear in your list. If they're still not showing up, check the debug logs to see:
+1. If the user ID is correct when saving
+2. If transactions are being saved with the correct user ID
+3. If the query is finding transactions for your user ID
+
+Would you like me to add any additional error handling or logging to help track the data flow?
+
+---
+
+_**User**_
+
+when transcation save it should save with user id, it's help to get user's transaction in both local & firestore both
+
+---
+
+_**Assistant**_
+
+I see. Let's modify the `insertTransaction` method to properly save the user ID in both Firestore and local storage. Here's the fix:
+
+---
+
+_**Assistant**_
+
+```
+  Future<models.Transaction> insertTransaction(models.Transaction transaction) async {
+    try {
+      // Get current user ID
+      final currentUser = FirebaseService().currentUser;
+      if (currentUser == null) {
+        throw Exception('No user logged in');
+      }
+
+      print('Starting to save transaction for user: ${currentUser.id}'); // Debug log
+
+      // Create transaction data with user ID and timestamps
+      final transactionData = {
+        ...transaction.toMap(),
+        'userId': currentUser.id, // Ensure user ID is set
+        'date': transaction.date.toIso8601String(), // Ensure date is in correct format
+        'createdAt': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+        'isSynced': 1,
+      };
+
+      print('Prepared transaction data: $transactionData'); // Debug log
+
+      // Save to Firestore
+      final docRef = await _firestore.collection('transactions').add(transactionData);
+      print('Saved to Firestore with ID: ${docRef.id}'); // Debug log
+
+      // Add Firestore document ID to transaction data
+      final completeTransactionData = {
+        ...transactionData,
+        'id': docRef.id,
+      };
+
+      // Save to local SQLite database with the same data
+      final db = await database;
+      await db.insert(
+        'transactions',
+        completeTransactionData,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+      print('Transaction saved successfully:'); // Debug logs
+      print('- User ID: ${currentUser.id}');
+      print('- Transaction ID: ${docRef.id}');
+      print('- Description: ${transaction.description}');
+      print('- Amount: ${transaction.amount}');
+      print('- Date: ${transaction.date}');
+
+      return models.Transaction.fromMap(completeTransactionData);
+    } catch (e, stackTrace) {
+      print('Error saving transaction: $e'); // Debug log error
+      print('Stack trace: $stackTrace'); // Debug log stack trace
+
+      // If Firestore fails, save to local database only
+      try {
+        final currentUser = FirebaseService().currentUser;
+        if (currentUser == null) {
+          throw Exception('No user logged in');
+        }
+
+        // Create local-only transaction data
+        final localTransactionData = {
+          ...transaction.toMap(),
+          'userId': currentUser.id, // Ensure user ID is set
+          'date': transaction.date.toIso8601String(),
+          'createdAt': DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
+          'isSynced': 0, // Mark as not synced
+        };
+
+        // Save to local database
+        final db = await database;
+        await db.insert(
+          'transactions',
+          localTransactionData,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+
+        print('Saved to local database only:'); // Debug logs
+        print('- User ID: ${currentUser.id}');
+        print('- Description: ${transaction.description}');
+        print('- Amount: ${transaction.amount}');
+        print('- Date: ${transaction.date}');
+
+        return models.Transaction.fromMap(localTransactionData);
+      } catch (localError) {
+        print('Error saving to local database: $localError');
+        rethrow;
+      }
+    }
+  }
+```
+
+---
+
+_**Assistant**_
+
+
+
+I've updated the `insertTransaction` method to properly handle user IDs and ensure consistency between Firestore and local storage. Here are the key changes:
+
+1. Added proper user ID handling:
+   ```dart
+   final transactionData = {
+     ...transaction.toMap(),
+     'userId': currentUser.id, // Ensure user ID is set
+     'date': transaction.date.toIso8601String(),
+     'createdAt': DateTime.now().toIso8601String(),
+     'updatedAt': DateTime.now().toIso8601String(),
+     'isSynced': 1,
+   };
+   ```
+
+2. Save the same data to both Firestore and local storage:
+   ```dart
+   // Save to Firestore
+   final docRef = await _firestore.collection('transactions').add(transactionData);
+   
+   // Add Firestore ID to data
+   final completeTransactionData = {
+     ...transactionData,
+     'id': docRef.id,
+   };
+   
+   // Save to local SQLite with same data
+   await db.insert('transactions', completeTransactionData);
+   ```
+
+3. Added better error handling and fallback:
+   ```dart
+   // If Firestore fails, save to local only
+   final localTransactionData = {
+     ...transaction.toMap(),
+     'userId': currentUser.id,
+     'date': transaction.date.toIso8601String(),
+     'isSynced': 0, // Mark as not synced
+   };
+   ```
+
+4. Added detailed logging:
+   ```dart
+   print('Transaction saved successfully:');
+   print('- User ID: ${currentUser.id}');
+   print('- Transaction ID: ${docRef.id}');
+   print('- Description: ${transaction.description}');
+   print('- Amount: ${transaction.amount}');
+   ```
+
+This ensures that:
+1. Every transaction has the correct user ID
+2. Data is consistent between Firestore and local storage
+3. Dates are properly formatted
+4. Sync status is properly tracked
+5. Detailed logs help track the saving process
+
+The transactions should now be properly associated with users and appear in both the local database and Firestore. Would you like me to add any additional error handling or logging?
+
+---
+
+_**User**_
+
+here no userId has created
+
+---
+
+_**Assistant**_
+
+I see the issue in the Firestore data - there's no `userId` field being saved. Let's fix the `insertTransaction` method to properly include the `description` and `userId` fields:
+
+---
+
+_**Assistant**_
+
+```
+  Future<models.Transaction> insertTransaction(models.Transaction transaction) async {
+    try {
+      // Get current user ID
+      final currentUser = FirebaseService().currentUser;
+      if (currentUser == null) {
+        throw Exception('No user logged in');
+      }
+
+      print('Starting to save transaction for user: ${currentUser.id}'); // Debug log
+
+      // Create transaction data with user ID and timestamps
+      final transactionData = {
+        'userId': currentUser.id, // Ensure user ID is set
+        'amount': transaction.amount,
+        'date': transaction.date.toIso8601String(),
+        'type': transaction.type.toString().split('.').last,
+        'category': transaction.category.toString().split('.').last,
+        'description': transaction.description,
+        'notes': transaction.notes ?? '',
+        'receiptPath': transaction.receiptPath ?? '',
+        'isRecurring': transaction.isRecurring ? 1 : 0,
+        'recurringId': transaction.recurringId ?? '',
+        'createdAt': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+
+      print('Prepared transaction data: $transactionData'); // Debug log
+
+      // Save to Firestore
+      final docRef = await _firestore.collection('transactions').add(transactionData);
+      print('Saved to Firestore with ID: ${docRef.id}'); // Debug log
+
+      // Add Firestore document ID to transaction data
+      final completeTransactionData = {
+        ...transactionData,
+        'id': docRef.id,
+        'isSynced': 1,
+      };
+
+      // Save to local SQLite database with the same data
+      final db = await database;
+      await db.insert(
+        'transactions',
+        completeTransactionData,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+      print('Transaction saved successfully:'); // Debug logs
+      print('- User ID: ${currentUser.id}');
+      print('- Transaction ID: ${docRef.id}');
+      print('- Description: ${transaction.description}');
+      print('- Amount: ${transaction.amount}');
+      print('- Type: ${transaction.type}');
+      print('- Category: ${transaction.category}');
+      print('- Date: ${transaction.date}');
+
+      return models.Transaction.fromMap(completeTransactionData);
+    } catch (e, stackTrace) {
+      print('Error saving transaction: $e'); // Debug log error
+      print('Stack trace: $stackTrace'); // Debug log stack trace
+
+      // If Firestore fails, save to local database only
+      try {
+        final currentUser = FirebaseService().currentUser;
+        if (currentUser == null) {
+          throw Exception('No user logged in');
+        }
+
+        // Create local-only transaction data
+        final localTransactionData = {
+          'userId': currentUser.id,
+          'amount': transaction.amount,
+          'date': transaction.date.toIso8601String(),
+          'type': transaction.type.toString().split('.').last,
+          'category': transaction.category.toString().split('.').last,
+          'description': transaction.description,
+          'notes': transaction.notes ?? '',
+          'receiptPath': transaction.receiptPath ?? '',
+          'isRecurring': transaction.isRecurring ? 1 : 0,
+          'recurringId': transaction.recurringId ?? '',
+          'createdAt': DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
+          'isSynced': 0, // Mark as not synced
+        };
+
+        // Save to local database
+        final db = await database;
+        await db.insert(
+          'transactions',
+          localTransactionData,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+
+        print('Saved to local database only:'); // Debug logs
+        print('- User ID: ${currentUser.id}');
+        print('- Description: ${transaction.description}');
+        print('- Amount: ${transaction.amount}');
+        print('- Type: ${transaction.type}');
+        print('- Category: ${transaction.category}');
+        print('- Date: ${transaction.date}');
+
+        return models.Transaction.fromMap(localTransactionData);
+      } catch (localError) {
+        print('Error saving to local database: $localError');
+        rethrow;
+      }
+    }
+  }
+```
+
+---
+
+_**Assistant**_
+
+
+
+I've updated the `insertTransaction` method to explicitly set all fields instead of using `toMap()`. The key changes are:
+
+1. Explicitly setting all fields in Firestore data:
+```dart
+final transactionData = {
+  'userId': currentUser.id,  // Explicitly set userId
+  'amount': transaction.amount,
+  'date': transaction.date.toIso8601String(),
+  'type': transaction.type.toString().split('.').last,
+  'category': transaction.category.toString().split('.').last,
+  'description': transaction.description,
+  'notes': transaction.notes ?? '',
+  'receiptPath': transaction.receiptPath ?? '',
+  'isRecurring': transaction.isRecurring ? 1 : 0,
+  'recurringId': transaction.recurringId ?? '',
+  'createdAt': DateTime.now().toIso8601String(),
+  'updatedAt': DateTime.now().toIso8601String(),
+};
+```
+
+2. Properly handling enum values:
+```dart
+'type': transaction.type.toString().split('.').last,
+'category': transaction.category.toString().split('.').last,
+```
+
+3. Using the same format for local storage:
+```dart
+final localTransactionData = {
+  'userId': currentUser.id,
+  'amount': transaction.amount,
+  // ... same fields as above
+  'isSynced': 0,
+};
+```
+
+4. Added more detailed logging:
+```dart
+print('- User ID: ${currentUser.id}');
+print('- Description: ${transaction.description}');
+print('- Amount: ${transaction.amount}');
+print('- Type: ${transaction.type}');
+print('- Category: ${transaction.category}');
+```
+
+This should now:
+1. Always include the userId in both Firestore and local storage
+2. Properly format all fields
+3. Handle null values correctly
+4. Save enum values in a readable format
+
+The transactions should now be properly saved with the user ID and be retrievable in the transactions screen. Would you like me to add any additional validation or logging?
+
+---
+
+_**User**_
+
+the database_service insert transaction on calling in add trancation
+
+---
+
+_**Assistant**_
+
+I see. Let's check where the `insertTransaction` is being called from the add transaction screen. Let me help you fix the transaction form screen to properly call the database service:
+
+---
+
+_**Assistant**_
+
+```
+import 'package:flutter/material.dart';
+import '../constants/constants.dart';
+import '../models/models.dart';
+import '../services/database_service.dart';
+import '../services/firebase_service.dart';
+import '../widgets/widgets.dart';
+
+class TransactionFormScreen extends StatefulWidget {
+  const TransactionFormScreen({Key? key}) : super(key: key);
+
+  @override
+  State<TransactionFormScreen> createState() => _TransactionFormScreenState();
+}
+
+class _TransactionFormScreenState extends State<TransactionFormScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _databaseService = DatabaseService();
+  bool _isLoading = false;
+
+  // Form fields
+  TransactionType _type = TransactionType.expense;
+  TransactionCategory _category = TransactionCategory.food;
+  final _amountController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _notesController = TextEditingController();
+  DateTime _date = DateTime.now();
+  bool _isRecurring = false;
+
+  Future<void> _saveTransaction() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final currentUser = FirebaseService().currentUser;
+      if (currentUser == null) {
+        throw Exception('No user logged in');
+      }
+
+      print('Creating transaction with data:'); // Debug log
+      print('- User ID: ${currentUser.id}');
+      print('- Type: $_type');
+      print('- Category: $_category');
+      print('- Amount: ${_amountController.text}');
+      print('- Description: ${_descriptionController.text}');
+      print('- Date: $_date');
+
+      final transaction = Transaction(
+        userId: currentUser.id,
+        type: _type,
+        category: _category,
+        amount: double.parse(_amountController.text),
+        description: _descriptionController.text,
+        notes: _notesController.text.isEmpty ? null : _notesController.text,
+        date: _date,
+        isRecurring: _isRecurring,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      print('Calling insertTransaction...'); // Debug log
+      final savedTransaction = await _databaseService.insertTransaction(transaction);
+      print('Transaction saved successfully: ${savedTransaction.id}'); // Debug log
+
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      print('Error saving transaction: $e'); // Debug log
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save transaction: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: CustomAppBar(
+        title: 'Add Transaction',
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.all(AppConstants.paddingMedium),
+                children: [
+                  // Transaction Type
+                  SegmentedButton<TransactionType>(
+                    segments: const [
+                      ButtonSegment(
+                        value: TransactionType.expense,
+                        label: Text('Expense'),
+                        icon: Icon(Icons.remove_circle_outline),
+                      ),
+                      ButtonSegment(
+                        value: TransactionType.income,
+                        label: Text('Income'),
+                        icon: Icon(Icons.add_circle_outline),
+                      ),
+                    ],
+                    selected: {_type},
+                    onSelectionChanged: (Set<TransactionType> selected) {
+                      setState(() => _type = selected.first);
+                    },
+                  ),
+                  const SizedBox(height: AppConstants.paddingMedium),
+
+                  // Amount
+                  TextFormField(
+                    controller: _amountController,
+                    decoration: const InputDecoration(
+                      labelText: 'Amount',
+                      prefixIcon: Icon(Icons.attach_money),
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter an amount';
+                      }
+                      if (double.tryParse(value) == null) {
+                        return 'Please enter a valid number';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: AppConstants.paddingMedium),
+
+                  // Description
+                  TextFormField(
+                    controller: _descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      prefixIcon: Icon(Icons.description),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a description';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: AppConstants.paddingMedium),
+
+                  // Category
+                  DropdownButtonFormField<TransactionCategory>(
+                    value: _category,
+                    decoration: const InputDecoration(
+                      labelText: 'Category',
+                      prefixIcon: Icon(Icons.category),
+                    ),
+                    items: TransactionCategory.values.map((category) {
+                      return DropdownMenuItem(
+                        value: category,
+                        child: Text(category.toString().split('.').last),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _category = value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: AppConstants.paddingMedium),
+
+                  // Date
+                  ListTile(
+                    leading: const Icon(Icons.calendar_today),
+                    title: Text(
+                      'Date: ${_date.day}/${_date.month}/${_date.year}',
+                    ),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _date,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) {
+                        setState(() => _date = picked);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: AppConstants.paddingMedium),
+
+                  // Notes
+                  TextFormField(
+                    controller: _notesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Notes (Optional)',
+                      prefixIcon: Icon(Icons.note),
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: AppConstants.paddingMedium),
+
+                  // Is Recurring
+                  SwitchListTile(
+                    title: const Text('Recurring Transaction'),
+                    value: _isRecurring,
+                    onChanged: (bool value) {
+                      setState(() => _isRecurring = value);
+                    },
+                  ),
+                ],
+              ),
+            ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(AppConstants.paddingMedium),
+        child: ElevatedButton(
+          onPressed: _isLoading ? null : _saveTransaction,
+          child: const Text('Save Transaction'),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _descriptionController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+}
+```
+
+---
+
+_**Assistant**_
+
+
+
+I've updated the transaction form screen to properly save transactions with the user ID. The key changes are:
+
+1. Added DatabaseService instance:
+```dart
+final _databaseService = DatabaseService();
+```
+
+2. Get current user ID when saving:
+```dart
+final currentUser = FirebaseService().currentUser;
+if (currentUser == null) {
+  throw Exception('No user logged in');
+}
+```
+
+3. Create transaction with user ID:
+```dart
+final transaction = Transaction(
+  userId: currentUser.id,  // Set the user ID
+  type: _type,
+  category: _category,
+  amount: double.parse(_amountController.text),
+  description: _descriptionController.text,
+  notes: _notesController.text.isEmpty ? null : _notesController.text,
+  date: _date,
+  isRecurring: _isRecurring,
+  createdAt: DateTime.now(),
+  updatedAt: DateTime.now(),
+);
+```
+
+4. Save using DatabaseService:
+```dart
+final savedTransaction = await _databaseService.insertTransaction(transaction);
+```
+
+5. Added detailed logging:
+```dart
+print('Creating transaction with data:');
+print('- User ID: ${currentUser.id}');
+print('- Type: $_type');
+print('- Category: $_category');
+print('- Amount: ${_amountController.text}');
+```
+
+Now when you add a transaction:
+1. It will get the current user's ID
+2. Save the transaction with that user ID to both Firestore and local storage
+3. Show proper loading states and error messages
+4. Return to the previous screen on success
+
+The transactions should now be properly saved with the user ID and appear in your transaction list. Would you like me to add any additional validation or error handling?
+
+---
+
+_**User**_
+
+════════ Exception caught by widgets library ═══════════════════════════════════
+The following assertion was thrown building TransactionFormScreen(dirty, dependencies: [_InheritedTheme, _LocalizationsScope-[GlobalKey#ca365]], state: _TransactionFormScreenState#10ef8):
+There should be exactly one item with [DropdownButton]'s value: TransactionCategory.food. 
+Either zero or 2 or more [DropdownMenuItem]s were detected with the same value
+'package:flutter/src/material/dropdown.dart':
+Failed assertion: line 1604 pos 15: 'items == null || items.isEmpty || value == null ||
+              items.where((DropdownMenuItem<T> item) {
+                return item.value == value;
+              }).length == 1'
+
+The relevant error-causing widget was:
+    TransactionFormScreen TransactionFormScreen:file:///Users/mac/Downloads/wealthwhiz/lib/screens/home_screen.dart:71:49
+
+getting this error in transaction form screen when i am switching expense to income
+
+---
+
+_**Assistant**_
+
+
+
+I see the issue. The error occurs because the category dropdown items aren't being updated when switching between expense and income types. Let's fix the `TransactionFormScreen` to show different categories based on the transaction type:
+
+---
+
+_**Assistant**_
+
+```
+  // Category
+  DropdownButtonFormField<TransactionCategory>(
+    value: _category,
+    decoration: const InputDecoration(
+      labelText: 'Category',
+      prefixIcon: Icon(Icons.category),
+    ),
+    items: _type == TransactionType.expense
+        ? [
+            TransactionCategory.food,
+            TransactionCategory.shopping,
+            TransactionCategory.entertainment,
+            TransactionCategory.utilities,
+            TransactionCategory.transportation,
+            TransactionCategory.health,
+            TransactionCategory.education,
+            TransactionCategory.travel,
+            TransactionCategory.housing,
+            TransactionCategory.gifts,
+          ].map((category) {
+            return DropdownMenuItem(
+              value: category,
+              child: Text(category.toString().split('.').last),
+            );
+          }).toList()
+        : [
+            TransactionCategory.salary,
+            TransactionCategory.business,
+            TransactionCategory.investment,
+            TransactionCategory.freelance,
+          ].map((category) {
+            return DropdownMenuItem(
+              value: category,
+              child: Text(category.toString().split('.').last),
+            );
+          }).toList(),
+    onChanged: (value) {
+      if (value != null) {
+        setState(() => _category = value);
+      }
+    },
+  ),
+
+  // When type changes, update category to match
+  void _onTypeChanged(Set<TransactionType> selected) {
+    setState(() {
+      _type = selected.first;
+      // Set default category based on type
+      _category = _type == TransactionType.expense
+          ? TransactionCategory.food
+          : TransactionCategory.salary;
+    });
+  }
+
+  // In the build method, update the SegmentedButton's onSelectionChanged:
+  SegmentedButton<TransactionType>(
+    segments: const [
+      ButtonSegment(
+        value: TransactionType.expense,
+        label: Text('Expense'),
+        icon: Icon(Icons.remove_circle_outline),
+      ),
+      ButtonSegment(
+        value: TransactionType.income,
+        label: Text('Income'),
+        icon: Icon(Icons.add_circle_outline),
+      ),
+    ],
+    selected: {_type},
+    onSelectionChanged: _onTypeChanged,
+  ),
+```
+
+---
+
+_**Assistant**_
+
+
+
+I've updated the transaction form to properly handle categories based on transaction type. The key changes are:
+
+1. Created separate category lists for expense and income:
+```dart
+items: _type == TransactionType.expense
+    ? [
+        TransactionCategory.food,
+        TransactionCategory.shopping,
+        // ... other expense categories
+      ]
+    : [
+        TransactionCategory.salary,
+        TransactionCategory.business,
+        // ... other income categories
+      ]
+```
+
+2. Added a new method to handle type changes:
+```dart
+void _onTypeChanged(Set<TransactionType> selected) {
+  setState(() {
+    _type = selected.first;
+    // Set default category based on type
+    _category = _type == TransactionType.expense
+        ? TransactionCategory.food
+        : TransactionCategory.salary;
+  });
+}
+```
+
+This ensures that:
+1. When switching between expense and income:
+   - The category list updates appropriately
+   - A default category is selected based on the type
+   - No invalid categories can be selected
+2. Expense transactions only show expense categories
+3. Income transactions only show income categories
+
+The error should now be fixed, and you should be able to switch between expense and income types without any issues. Would you like me to add any additional categories or make any other changes to the form?
+
+---
+
+_**User**_
+
+<asynchronous suspension>
+#1      SqfliteDatabaseMixin.txnRawInsert.<anonymous closure> (package:sqflite_common/src/database_mixin.dart:576:14)
+<asynchronous suspension>
+#2      BasicLock.synchronized (package:synchronized/src/basic_lock.dart:33:16)
+<asynchronous suspension>
+#3      SqfliteDatabaseMixin.txnSynchronized (package:sqflite_common/src/database_mixin.dart:517:14)
+<asynchronous suspension>
+#4      DatabaseService.insertTransaction (package:wealthwhiz/services/database_service.dart:199:7)
+<asynchronous suspension>
+#5      _TransactionFormScreenState._saveTransaction (package:wealthwhiz/screens/transaction_form_screen.dart:174:11)
+<asynchronous suspension>
+flutter: Error saving to local database: DatabaseException(Error Domain=SqfliteDarwinDatabase Code=1 "table transactions has no column named notes" UserInfo={NSLocalizedDescription=table transactions has no column named notes}) sql 'INSERT OR REPLACE INTO transactions (userId, amount, date, type, category, description, notes, receiptPath, isRecurring, recurringId, createdAt, updatedAt, isSynced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)' args [fvGenYxGuWYZ12pPZTjyWk7R4XR2, 3.0, 2025-01-30T18:31:32.924653, income, salary, , , , 0, , 2025-01-30T18:32:06.761419, 2025-01-30T18:32:06.761534, 0]
+flutter: Error saving transaction: DatabaseException(Error Domain=SqfliteDarwinDatabase Code=1 "table transactions has no column named notes" UserInfo={NSLocalizedDescription=table transactions has no column named notes}) sql 'INSERT OR REPLACE INTO transactions (userId, amount, date, type, category, description, notes, receiptPath, isRecurring, recurringId, createdAt, updatedAt, isSynced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)' args [fvGenYxGuWYZ12pPZTjyWk7R4XR2, 3.0, 2025-01-30T18:31:32.924653, income, salary, , , , 0, , 2025-01-30T18:32:06.761419, 2025-01-30T18:32:06.761534, 0]
+
+---
+
+_**Assistant**_
+
+
+
+I see the issue. The error is because there's a mismatch between the database table schema and the data we're trying to insert. The table doesn't have a 'notes' column, but we're trying to insert data with a 'notes' field. Let's fix the database schema:
+
+---
+
+_**Assistant**_
+
+```
+  Future<void> _createTables(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE transactions (
+        id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
+        amount REAL NOT NULL,
+        date TEXT NOT NULL,
+        type TEXT NOT NULL,
+        category TEXT NOT NULL,
+        description TEXT NOT NULL,
+        notes TEXT,
+        receiptPath TEXT,
+        isRecurring INTEGER NOT NULL DEFAULT 0,
+        recurringId TEXT,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT,
+        isSynced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE budgets (
+        id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
+        category TEXT NOT NULL,
+        amount REAL NOT NULL,
+        startDate TEXT NOT NULL,
+        endDate TEXT NOT NULL,
+        isRecurring INTEGER NOT NULL DEFAULT 0,
+        recurringId TEXT,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT,
+        isSynced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE savings_goals (
+        id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL,
+        targetAmount REAL NOT NULL,
+        currentAmount REAL NOT NULL,
+        targetDate TEXT NOT NULL,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT,
+        status TEXT NOT NULL,
+        isSynced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+  }
+
+  // Helper method to upgrade database
+  Future<void> _upgradeDatabase() async {
+    final db = await database;
+    
+    // Check if notes column exists
+    var tableInfo = await db.rawQuery('PRAGMA table_info(transactions)');
+    bool hasNotesColumn = tableInfo.any((column) => column['name'] == 'notes');
+    
+    if (!hasNotesColumn) {
+      await db.execute('ALTER TABLE transactions ADD COLUMN notes TEXT');
+    }
+  }
+
+  // Update the database getter to handle upgrades
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDatabase();
+    await _upgradeDatabase(); // Add this line to handle upgrades
+    return _database!;
+  }
+
+  Future<Database> _initDatabase() async {
+    final path = join(await getDatabasesPath(), dbName);
+    return await openDatabase(
+      path,
+      version: 2, // Increment version number
+      onCreate: _createTables,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          // Add missing columns for version 2
+          await db.execute('ALTER TABLE transactions ADD COLUMN notes TEXT');
+        }
+      },
+    );
+  }
+```
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+Now let's update the `insertTransaction` method to handle the data correctly:
+
+---
+
+_**Assistant**_
+
+```
+  Future<models.Transaction> insertTransaction(models.Transaction transaction) async {
+    try {
+      // Get current user ID
+      final currentUser = FirebaseService().currentUser;
+      if (currentUser == null) {
+        throw Exception('No user logged in');
+      }
+
+      print('Starting to save transaction for user: ${currentUser.id}'); // Debug log
+
+      // Create transaction data with user ID and timestamps
+      final transactionData = {
+        'userId': currentUser.id,
+        'amount': transaction.amount,
+        'date': transaction.date.toIso8601String(),
+        'type': transaction.type.toString().split('.').last.toLowerCase(),
+        'category': transaction.category.toString().split('.').last.toLowerCase(),
+        'description': transaction.description,
+        'notes': transaction.notes ?? '',
+        'receiptPath': transaction.receiptPath ?? '',
+        'isRecurring': transaction.isRecurring ? 1 : 0,
+        'recurringId': transaction.recurringId ?? '',
+        'createdAt': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+
+      print('Prepared transaction data: $transactionData'); // Debug log
+
+      // Save to Firestore
+      final docRef = await _firestore.collection('transactions').add(transactionData);
+      print('Saved to Firestore with ID: ${docRef.id}'); // Debug log
+
+      // Add Firestore document ID to transaction data
+      final completeTransactionData = {
+        ...transactionData,
+        'id': docRef.id,
+        'isSynced': 1,
+      };
+
+      // Save to local SQLite database
+      final db = await database;
+      try {
+        await db.insert(
+          'transactions',
+          completeTransactionData,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        print('Saved to local database successfully'); // Debug log
+      } catch (dbError) {
+        print('Error inserting into local database: $dbError');
+        // Print the table schema for debugging
+        final tableInfo = await db.rawQuery('PRAGMA table_info(transactions)');
+        print('Table schema: $tableInfo');
+        rethrow;
+      }
+
+      return models.Transaction.fromMap(completeTransactionData);
+    } catch (e, stackTrace) {
+      print('Error saving transaction: $e'); // Debug log
+      print('Stack trace: $stackTrace'); // Debug log
+
+      // If Firestore fails, save to local database only
+      try {
+        final currentUser = FirebaseService().currentUser;
+        if (currentUser == null) {
+          throw Exception('No user logged in');
+        }
+
+        // Create local-only transaction data
+        final localTransactionData = {
+          'userId': currentUser.id,
+          'amount': transaction.amount,
+          'date': transaction.date.toIso8601String(),
+          'type': transaction.type.toString().split('.').last.toLowerCase(),
+          'category': transaction.category.toString().split('.').last.toLowerCase(),
+          'description': transaction.description,
+          'notes': transaction.notes ?? '',
+          'receiptPath': transaction.receiptPath ?? '',
+          'isRecurring': transaction.isRecurring ? 1 : 0,
+          'recurringId': transaction.recurringId ?? '',
+          'createdAt': DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
+          'isSynced': 0,
+        };
+
+        final db = await database;
+        await db.insert(
+          'transactions',
+          localTransactionData,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+
+        return models.Transaction.fromMap(localTransactionData);
+      } catch (localError) {
+        print('Error saving to local database: $localError');
+        rethrow;
+      }
+    }
+  }
+```
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+I've made several changes to fix the database issues:
+
+1. Updated the database schema to include all required columns:
+```sql
+CREATE TABLE transactions (
+  id TEXT PRIMARY KEY,
+  userId TEXT NOT NULL,
+  amount REAL NOT NULL,
+  date TEXT NOT NULL,
+  type TEXT NOT NULL,
+  category TEXT NOT NULL,
+  description TEXT NOT NULL,
+  notes TEXT,                    // Added this column
+  receiptPath TEXT,             // Changed from receiptUrl
+  isRecurring INTEGER NOT NULL DEFAULT 0,
+  recurringId TEXT,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT,
+  isSynced INTEGER NOT NULL DEFAULT 0
+)
+```
+
+2. Added database upgrade handling:
+```dart
+version: 2, // Incremented version
+onUpgrade: (db, oldVersion, newVersion) async {
+  if (oldVersion < 2) {
+    await db.execute('ALTER TABLE transactions ADD COLUMN notes TEXT');
+  }
+},
+```
+
+3. Added a helper method to check and add missing columns:
+```dart
+Future<void> _upgradeDatabase() async {
+  final db = await database;
+  var tableInfo = await db.rawQuery('PRAGMA table_info(transactions)');
+  bool hasNotesColumn = tableInfo.any((column) => column['name'] == 'notes');
+  if (!hasNotesColumn) {
+    await db.execute('ALTER TABLE transactions ADD COLUMN notes TEXT');
+  }
+}
+```
+
+4. Updated the transaction data handling:
+```dart
+final transactionData = {
+  'userId': currentUser.id,
+  'amount': transaction.amount,
+  'date': transaction.date.toIso8601String(),
+  'type': transaction.type.toString().split('.').last.toLowerCase(),
+  'category': transaction.category.toString().split('.').last.toLowerCase(),
+  'description': transaction.description,
+  'notes': transaction.notes ?? '',
+  // ... other fields
+};
+```
+
+5. Added better error handling and debugging:
+```dart
+try {
+  await db.insert('transactions', completeTransactionData);
+  print('Saved to local database successfully');
+} catch (dbError) {
+  print('Error inserting into local database: $dbError');
+  final tableInfo = await db.rawQuery('PRAGMA table_info(transactions)');
+  print('Table schema: $tableInfo');
+  rethrow;
+}
+```
+
+To apply these changes:
+1. Delete the existing database file (it will be recreated with the new schema)
+2. Restart the app
+3. Try adding a new transaction
+
+The transactions should now save correctly to both Firestore and local storage. Would you like me to add any additional error handling or logging?
+
+---
+
+_**User**_
+
+flutter: Error saving to local database: DatabaseException(Error Domain=SqfliteDarwinDatabase Code=1 "table transactions has no column named receiptPath" UserInfo={NSLocalizedDescription=table transactions has no column named receiptPath}) sql 'INSERT OR REPLACE INTO transactions (userId, amount, date, type, category, description, notes, receiptPath, isRecurring, recurringId, createdAt, updatedAt, isSynced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)' args [fvGenYxGuWYZ12pPZTjyWk7R4XR2, 2.0, 2025-01-30T18:34:07.381160, income, salary, , , , 0, , 2025-01-30T18:34:12.499527, 2025-01-30T18:34:12.499592, 0]
+flutter: Error saving transaction: DatabaseException(Error Domain=SqfliteDarwinDatabase Code=1 "table transactions has no column named receiptPath" UserInfo={NSLocalizedDescription=table transactions has no column named receiptPath}) sql 'INSERT OR REPLACE INTO transactions (userId, amount, date, type, category, description, notes, receiptPath, isRecurring, recurringId, createdAt, updatedAt, isSynced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)' args [fvGenYxGuWYZ12pPZTjyWk7R4XR2, 2.0, 2025-01-30T18:34:07.381160, income, salary, , , , 0, , 2025-01-30T18:34:12.499527, 2025-01-30T18:34:12.499592, 0]
+
+---
+
+_**Assistant**_
+
+I see the issue - we need to add the `receiptPath` column to the transactions table since it's missing. Let's update the database upgrade logic to handle this:
+
+---
+
+_**Assistant**_
+
+```
+  Future<void> _upgradeDatabase() async {
+    final db = await database;
+
+    var tableInfo = await db.rawQuery('PRAGMA table_info(transactions)');
+    
+    // Check for notes column
+    bool hasNotesColumn = tableInfo.any((column) => column['name'] == 'notes');
+    if (!hasNotesColumn) {
+      await db.execute('ALTER TABLE transactions ADD COLUMN notes TEXT');
+    }
+
+    // Check for receiptPath column
+    bool hasReceiptPathColumn = tableInfo.any((column) => column['name'] == 'receiptPath');
+    if (!hasReceiptPathColumn) {
+      await db.execute('ALTER TABLE transactions ADD COLUMN receiptPath TEXT');
+    }
+  }
+
+  Future<Database> _initDatabase() async {
+    final path = join(await getDatabasesPath(), dbName);
+    return await openDatabase(
+      path,
+      version: 3, // Increment version number
+      onCreate: _createTables,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('ALTER TABLE transactions ADD COLUMN notes TEXT');
+        }
+        if (oldVersion < 3) {
+          await db.execute('ALTER TABLE transactions ADD COLUMN receiptPath TEXT');
+        }
+      },
+    );
+```
+
+---
+
+_**Assistant**_
+
+
+
+I've made the following changes to fix the database schema issue:
+
+1. Incremented the database version from 2 to 3 to trigger the upgrade process
+2. Added a new upgrade step for version 3 that adds the `receiptPath` column
+3. Updated the `_upgradeDatabase` method to check for and add the `receiptPath` column if it's missing
+
+To apply these changes:
+
+1. Delete the existing database file (it will be recreated with the new schema)
+2. Restart the app
+3. Try adding a new transaction
+
+The app should now be able to save transactions with the `receiptPath` field correctly. The error you were seeing should be resolved since the database table will now have all the necessary columns.
+
+Would you like me to add any additional error handling or make any other changes to the database schema?
+
+---
+
+_**User**_
+
+show floating snackbar after successfull saved transaction
+
+---
+
+_**Assistant**_
+
+I'll help you add a success snackbar after a transaction is saved. We'll need to modify the `insertTransaction` method to return a success status that can be used by the UI to show the snackbar.
+
+---
+
+_**Assistant**_
+
+```
+  Future<(models.Transaction, bool)> insertTransaction(models.Transaction transaction) async {
+    try {
+      // Get current user ID
+      final currentUser = FirebaseService().currentUser;
+      if (currentUser == null) {
+        throw Exception('No user logged in');
+      }
+
+      print('Starting to save transaction for user: ${currentUser.id}'); // Debug log
+
+      // Create transaction data with user ID and timestamps
+      final transactionData = {
+        'userId': currentUser.id,
+        'amount': transaction.amount,
+        'date': transaction.date.toIso8601String(),
+        'type': transaction.type.toString().split('.').last.toLowerCase(),
+        'category': transaction.category.toString().split('.').last.toLowerCase(),
+        'description': transaction.description,
+        'notes': transaction.notes ?? '',
+        'receiptPath': transaction.receiptPath ?? '',
+        'isRecurring': transaction.isRecurring ? 1 : 0,
+        'recurringId': transaction.recurringId ?? '',
+        'createdAt': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+
+      print('Prepared transaction data: $transactionData'); // Debug log
+
+      // Save to Firestore
+      final docRef = await _firestore.collection('transactions').add(transactionData);
+      print('Saved to Firestore with ID: ${docRef.id}'); // Debug log
+
+      // Add Firestore document ID to transaction data
+      final completeTransactionData = {
+        ...transactionData,
+        'id': docRef.id,
+        'isSynced': 1,
+      };
+
+      // Save to local SQLite database
+      final db = await database;
+      try {
+        await db.insert(
+          'transactions',
+          completeTransactionData,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        print('Saved to local database successfully'); // Debug log
+      } catch (dbError) {
+        print('Error inserting into local database: $dbError');
+        // Print the table schema for debugging
+        final tableInfo = await db.rawQuery('PRAGMA table_info(transactions)');
+        print('Table schema: $tableInfo');
+        rethrow;
+      }
+
+      return (models.Transaction.fromMap(completeTransactionData), true);
+    } catch (e, stackTrace) {
+      print('Error saving transaction: $e'); // Debug log
+      print('Stack trace: $stackTrace'); // Debug log
+
+      // If Firestore fails, save to local database only
+      try {
+        final currentUser = FirebaseService().currentUser;
+        if (currentUser == null) {
+          throw Exception('No user logged in');
+        }
+
+        // Create local-only transaction data
+        final localTransactionData = {
+          'userId': currentUser.id,
+          'amount': transaction.amount,
+          'date': transaction.date.toIso8601String(),
+          'type': transaction.type.toString().split('.').last.toLowerCase(),
+          'category': transaction.category.toString().split('.').last.toLowerCase(),
+          'description': transaction.description,
+          'notes': transaction.notes ?? '',
+          'receiptPath': transaction.receiptPath ?? '',
+          'isRecurring': transaction.isRecurring ? 1 : 0,
+          'recurringId': transaction.recurringId ?? '',
+          'createdAt': DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
+          'isSynced': 0,
+        };
+
+        final db = await database;
+        await db.insert(
+          'transactions',
+          localTransactionData,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+
+        return (models.Transaction.fromMap(localTransactionData), false);
+      } catch (localError) {
+        print('Error saving to local database: $localError');
+        rethrow;
+      }
+    }
+  }
+```
+
+---
+
+_**Assistant**_
+
+
+
+Now let's update the transaction form screen to show the snackbar:
+
+---
+
+_**Assistant**_
+
+```
+  Future<void> _saveTransaction() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        final transaction = Transaction(
+          id: '',  // Will be set by Firestore
+          userId: '',  // Will be set by DatabaseService
+          amount: _amount,
+          date: _date,
+          type: _type,
+          category: _category,
+          description: _description,
+          notes: _notes,
+          receiptPath: _receiptPath,
+          isRecurring: _isRecurring,
+          recurringId: _recurringId,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        final (savedTransaction, isFullySynced) = await _databaseService.insertTransaction(transaction);
+        
+        if (!mounted) return;
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isFullySynced 
+                ? 'Transaction saved successfully!' 
+                : 'Transaction saved locally. Will sync when online.',
+            ),
+            backgroundColor: isFullySynced ? Colors.green : Colors.orange,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+
+        Navigator.pop(context, savedTransaction);
+      } catch (e) {
+        print('Error saving transaction: $e');
+        if (!mounted) return;
+        
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving transaction: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    }
+  }
+```
+
+---
+
+_**Assistant**_
+
+
+
+I've made the following changes:
+
+1. Updated the `insertTransaction` method in `DatabaseService` to return a tuple containing:
+   - The saved transaction
+   - A boolean indicating whether the transaction was fully synced (true) or only saved locally (false)
+
+2. Updated the transaction form screen to:
+   - Show a floating snackbar with a success message after saving
+   - Use different colors and messages based on whether the transaction was fully synced:
+     - Green with "Transaction saved successfully!" for fully synced transactions
+     - Orange with "Transaction saved locally. Will sync when online." for locally saved transactions
+   - Show a red error snackbar if saving fails
+   - Added rounded corners and margins to make the snackbar look better
+   - Improved error handling and state management
+
+The snackbar will now appear at the bottom of the screen with a nice floating appearance and will automatically dismiss after a few seconds. The color and message will indicate whether the transaction was fully saved to both Firestore and local storage (green) or just saved locally (orange).
+
+Would you like me to make any adjustments to the appearance or behavior of the snackbar?
+
+---
+
+_**User**_
+
+add filter in transaction screen of all income expense
+
+---
+
+_**Assistant**_
+
+I'll help you add a filter for income/expense transactions in the transaction screen. First, let's create the filter UI and functionality:
+
+---
+
+_**Assistant**_
+
+```
+import 'package:flutter/material.dart';
+import '../models/models.dart';
+import '../services/database_service.dart';
+import '../services/firebase_service.dart';
+import 'transaction_form_screen.dart';
+
+class TransactionListScreen extends StatefulWidget {
+  @override
+  _TransactionListScreenState createState() => _TransactionListScreenState();
+}
+
+class _TransactionListScreenState extends State<TransactionListScreen> {
+  final DatabaseService _databaseService = DatabaseService();
+  String? _selectedFilter = 'All'; // Default filter value
+  List<Transaction> _allTransactions = [];
+  List<Transaction> _filteredTransactions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTransactions();
+  }
+
+  Future<void> _loadTransactions() async {
+    try {
+      final currentUser = FirebaseService().currentUser;
+      if (currentUser == null) {
+        throw Exception('No user logged in');
+      }
+
+      final transactions = await _databaseService.getTransactions(currentUser.id);
+      setState(() {
+        _allTransactions = transactions;
+        _applyFilter(_selectedFilter);
+      });
+    } catch (e) {
+      print('Error loading transactions: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading transactions: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  void _applyFilter(String? filter) {
+    setState(() {
+      _selectedFilter = filter;
+      if (filter == 'All' || filter == null) {
+        _filteredTransactions = List.from(_allTransactions);
+      } else {
+        _filteredTransactions = _allTransactions
+            .where((transaction) =>
+                transaction.type.toString().split('.').last.toLowerCase() ==
+                filter.toLowerCase())
+            .toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Transactions'),
+        actions: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: DropdownButton<String>(
+              value: _selectedFilter,
+              dropdownColor: Theme.of(context).cardColor,
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+                fontSize: 16,
+              ),
+              items: ['All', 'Income', 'Expense']
+                  .map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(
+                    value,
+                    style: TextStyle(
+                      color: value == 'Income'
+                          ? Colors.green
+                          : value == 'Expense'
+                              ? Colors.red
+                              : null,
+                    ),
+                  ),
+                );
+              }).toList(),
+              onChanged: _applyFilter,
+              underline: Container(), // Remove the default underline
+              icon: Icon(
+                Icons.filter_list,
+                color: Theme.of(context).iconTheme.color,
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: _loadTransactions,
+        child: _filteredTransactions.isEmpty
+            ? Center(
+                child: Text(
+                  'No ${_selectedFilter?.toLowerCase() ?? ''} transactions found',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              )
+            : ListView.builder(
+                itemCount: _filteredTransactions.length,
+                itemBuilder: (context, index) {
+                  final transaction = _filteredTransactions[index];
+                  return Card(
+                    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: transaction.type.toString().contains('income')
+                            ? Colors.green
+                            : Colors.red,
+                        child: Icon(
+                          transaction.type.toString().contains('income')
+                              ? Icons.arrow_upward
+                              : Icons.arrow_downward,
+                          color: Colors.white,
+                        ),
+                      ),
+                      title: Text(transaction.description),
+                      subtitle: Text(
+                        '${transaction.category.toString().split('.').last} • ${transaction.date.toString().split(' ')[0]}',
+                      ),
+                      trailing: Text(
+                        '${transaction.type.toString().contains('income') ? '+' : '-'}\$${transaction.amount.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          color: transaction.type.toString().contains('income')
+                              ? Colors.green
+                              : Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => TransactionFormScreen()),
+          );
+          if (result != null) {
+            _loadTransactions();
+          }
+        },
+        child: Icon(Icons.add),
+      ),
+    );
+  }
+}
+```
+
+---
+
+_**Assistant**_
+
+
+
+I've updated the transaction list screen to include a filter dropdown in the app bar. Here are the key changes:
+
+1. Added state variables for filtering:
+   ```dart
+   String? _selectedFilter = 'All'; // Default filter value
+   List<Transaction> _allTransactions = []; // Store all transactions
+   List<Transaction> _filteredTransactions = []; // Store filtered transactions
+   ```
+
+2. Added a filter dropdown in the app bar:
+   ```dart
+   actions: [
+     Container(
+       padding: EdgeInsets.symmetric(horizontal: 16),
+       child: DropdownButton<String>(
+         value: _selectedFilter,
+         items: ['All', 'Income', 'Expense'].map((String value) {
+           return DropdownMenuItem<String>(
+             value: value,
+             child: Text(value,
+               style: TextStyle(
+                 color: value == 'Income' ? Colors.green : value == 'Expense' ? Colors.red : null,
+               ),
+             ),
+           );
+         }).toList(),
+         onChanged: _applyFilter,
+       ),
+     ),
+   ]
+   ```
+
+3. Added filter logic:
+   ```dart
+   void _applyFilter(String? filter) {
+     setState(() {
+       _selectedFilter = filter;
+       if (filter == 'All' || filter == null) {
+         _filteredTransactions = List.from(_allTransactions);
+       } else {
+         _filteredTransactions = _allTransactions
+             .where((transaction) =>
+                 transaction.type.toString().split('.').last.toLowerCase() ==
+                 filter.toLowerCase())
+             .toList();
+       }
+     });
+   }
+   ```
+
+4. Updated the UI to show filtered transactions:
+   - Shows a message when no transactions match the filter
+   - Uses different colors for income (green) and expense (red)
+   - Maintains the pull-to-refresh functionality
+   - Keeps the add transaction FAB
+
+The filter dropdown is styled to match the app's theme and includes:
+- Color-coded options (green for Income, red for Expense)
+- A filter icon
+- No underline for a cleaner look
+- Proper background color based on the theme
+
+Would you like me to make any adjustments to the filter's appearance or functionality?
+
+---
+
+_**User**_
+
+not showing any selection in transaction screen to filter transactions
+
+---
+
+_**Assistant**_
+
+Let me help you fix the issue with the transaction filter not showing up. The problem might be with the styling and visibility of the dropdown. Let's modify the dropdown to make it more visible and user-friendly:
+
+---
+
+_**Assistant**_
+
+```
+      appBar: AppBar(
+        title: Text('Transactions'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Center(
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Theme.of(context).dividerColor,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.filter_list, size: 20),
+                    SizedBox(width: 8),
+                    DropdownButton<String>(
+                      value: _selectedFilter,
+                      dropdownColor: Theme.of(context).cardColor,
+                      style: TextStyle(
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                        fontSize: 16,
+                      ),
+                      items: ['All', 'Income', 'Expense']
+                          .map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (value != 'All')
+                                Icon(
+                                  value == 'Income'
+                                      ? Icons.arrow_upward
+                                      : Icons.arrow_downward,
+                                  color: value == 'Income'
+                                      ? Colors.green
+                                      : Colors.red,
+                                  size: 16,
+                                ),
+                              if (value != 'All') SizedBox(width: 8),
+                              Text(
+                                value,
+                                style: TextStyle(
+                                  color: value == 'Income'
+                                      ? Colors.green
+                                      : value == 'Expense'
+                                          ? Colors.red
+                                          : Theme.of(context)
+                                              .textTheme
+                                              .bodyLarge
+                                              ?.color,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: _applyFilter,
+                      underline: Container(),
+                      icon: Icon(Icons.arrow_drop_down,
+                          color: Theme.of(context).iconTheme.color),
+                      elevation: 4,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+```
+
+---
+
+_**Assistant**_
+
+
+
+I've updated the filter dropdown to make it more visible and user-friendly with the following changes:
+
+1. Added a bordered container around the dropdown
+2. Added a filter icon before the dropdown
+3. Enhanced the dropdown items with icons:
+   - Up arrow for Income (green)
+   - Down arrow for Expense (red)
+4. Improved the styling:
+   - Added padding and margins
+   - Added a border radius
+   - Added elevation to the dropdown menu
+   - Made the text more visible with proper font weight
+   - Added proper spacing between icon and text
+
+The filter should now be clearly visible in the app bar with:
+- A bordered container
+- A filter icon
+- Clear dropdown items with icons
+- Proper color coding (green for Income, red for Expense)
+- Better visual hierarchy
+
+The dropdown should now be much more visible and easier to use. Would you like me to make any adjustments to the styling or layout?
+
+---
+
+_**User**_
+
+i think you are modifying wrong file, in dashboard recent transcation -> see all in tap of this transaction screen i need selection that filter the all, incomes & expenses
+
+---
+
+_**Assistant**_
+
+Ah, I understand now. You want to add the filter to the transaction list that appears when users tap "See All" from the dashboard's recent transactions. Let me help you create a dedicated screen for that:
+
+---
+
+_**Assistant**_
+
+```
+import 'package:flutter/material.dart';
+import '../models/models.dart';
+import '../services/database_service.dart';
+import '../services/firebase_service.dart';
+
+class AllTransactionsScreen extends StatefulWidget {
+  @override
+  _AllTransactionsScreenState createState() => _AllTransactionsScreenState();
+}
+
+class _AllTransactionsScreenState extends State<AllTransactionsScreen> {
+  final DatabaseService _databaseService = DatabaseService();
+  String _selectedFilter = 'All'; // Default filter value
+  List<Transaction> _allTransactions = [];
+  List<Transaction> _filteredTransactions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTransactions();
+  }
+
+  Future<void> _loadTransactions() async {
+    try {
+      final currentUser = FirebaseService().currentUser;
+      if (currentUser == null) {
+        throw Exception('No user logged in');
+      }
+
+      final transactions = await _databaseService.getTransactions(currentUser.id);
+      setState(() {
+        _allTransactions = transactions;
+        _applyFilter(_selectedFilter);
+      });
+    } catch (e) {
+      print('Error loading transactions: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading transactions: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  void _applyFilter(String filter) {
+    setState(() {
+      _selectedFilter = filter;
+      if (filter == 'All') {
+        _filteredTransactions = List.from(_allTransactions);
+      } else {
+        _filteredTransactions = _allTransactions
+            .where((transaction) =>
+                transaction.type.toString().split('.').last.toLowerCase() ==
+                filter.toLowerCase())
+            .toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('All Transactions'),
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(48.0),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildFilterChip('All'),
+                _buildFilterChip('Income'),
+                _buildFilterChip('Expense'),
+              ],
+            ),
+          ),
+        ),
+      ),
+      body: RefreshIndicator(
+        onRefresh: _loadTransactions,
+        child: _filteredTransactions.isEmpty
+            ? Center(
+                child: Text(
+                  'No ${_selectedFilter.toLowerCase()} transactions found',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              )
+            : ListView.builder(
+                itemCount: _filteredTransactions.length,
+                itemBuilder: (context, index) {
+                  final transaction = _filteredTransactions[index];
+                  return Card(
+                    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor:
+                            transaction.type.toString().contains('income')
+                                ? Colors.green
+                                : Colors.red,
+                        child: Icon(
+                          transaction.type.toString().contains('income')
+                              ? Icons.arrow_upward
+                              : Icons.arrow_downward,
+                          color: Colors.white,
+                        ),
+                      ),
+                      title: Text(transaction.description),
+                      subtitle: Text(
+                        '${transaction.category.toString().split('.').last} • ${transaction.date.toString().split(' ')[0]}',
+                      ),
+                      trailing: Text(
+                        '${transaction.type.toString().contains('income') ? '+' : '-'}\$${transaction.amount.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          color: transaction.type.toString().contains('income')
+                              ? Colors.green
+                              : Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label) {
+    final isSelected = _selectedFilter == label;
+    return FilterChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          color: isSelected ? Colors.white : Theme.of(context).textTheme.bodyLarge?.color,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      selected: isSelected,
+      onSelected: (bool selected) {
+        if (selected) {
+          _applyFilter(label);
+        }
+      },
+      selectedColor: label == 'Income'
+          ? Colors.green
+          : label == 'Expense'
+              ? Colors.red
+              : Theme.of(context).primaryColor,
+      backgroundColor: Theme.of(context).cardColor,
+      checkmarkColor: Colors.white,
+      elevation: 2,
+    );
+  }
+}
+```
+
+---
+
+_**Assistant**_
+
+
+
+Now let's update the dashboard to use this new screen when "See All" is tapped:
+
+---
+
+_**Assistant**_
+
+```
+  // In the recent transactions section
+  Widget _buildRecentTransactionsSection() {
+    return Card(
+      margin: EdgeInsets.all(16),
+      child: Column(
+        children: [
+          ListTile(
+            title: Text('Recent Transactions'),
+            trailing: TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AllTransactionsScreen(),
+                  ),
+                );
+              },
+              child: Text('See All'),
+            ),
+          ),
+          // Rest of the recent transactions widget
+        ],
+      ),
+    );
+  }
+```
+
+---
+
+_**Assistant**_
+
+
+
+I've made the following changes:
+
+1. Created a new `AllTransactionsScreen` with:
+   - Filter chips at the top for "All", "Income", and "Expense"
+   - Color-coded chips (green for Income, red for Expense)
+   - Proper filtering functionality
+   - Pull-to-refresh support
+   - Empty state message when no transactions are found
+   - Transaction list with all the existing styling
+
+2. Updated the dashboard's "See All" button to navigate to this new screen
+
+The filter chips provide a more touch-friendly and visually appealing way to filter transactions compared to a dropdown. They:
+- Show all options at once
+- Use color coding (green for Income, red for Expense)
+- Have a selected state with white text
+- Include a subtle elevation for better visual hierarchy
+
+To use this:
+1. Tap "See All" in the dashboard's recent transactions section
+2. The new screen will show all transactions
+3. Tap any filter chip to show:
+   - All transactions
+   - Only income transactions
+   - Only expense transactions
+4. Pull down to refresh the list
+
+Would you like me to make any adjustments to the styling or functionality?
+
+---
+
+_**User**_
+
+Replace Transaction icon with category icons
+
+---
+
+_**Assistant**_
+
+```
 undefined
 ```
 

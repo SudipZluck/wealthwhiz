@@ -6,6 +6,7 @@ import 'transactions_screen.dart';
 import 'budget_screen.dart';
 import 'goals_screen.dart';
 import 'profile_screen.dart';
+import '../screens/screens.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -61,6 +62,20 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+      floatingActionButton: _selectedIndex == 0 // Show only on Dashboard tab
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const TransactionFormScreen(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Add Transaction'),
+            )
+          : null,
     );
   }
 

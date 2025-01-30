@@ -106,8 +106,10 @@ class Transaction {
     return Transaction(
       id: map['id'] as String,
       userId: map['userId'] as String,
-      amount: map['amount'] as double,
-      date: DateTime.parse(map['date'] as String),
+      amount: (map['amount'] as num).toDouble(),
+      date: map['date'] is int
+          ? DateTime.fromMillisecondsSinceEpoch(map['date'] as int)
+          : DateTime.parse(map['date'].toString()),
       type: TransactionType.values.firstWhere(
         (e) => e.name == map['type'],
         orElse: () => TransactionType.expense,
@@ -119,12 +121,18 @@ class Transaction {
       description: map['description'] as String,
       receiptUrl: map['receiptUrl'] as String?,
       note: map['note'] as String?,
-      isRecurring: map['isRecurring'] ?? false,
+      isRecurring: map['isRecurring'] is int
+          ? (map['isRecurring'] as int) == 1
+          : map['isRecurring'] ?? false,
       recurringId: map['recurringId'] as String?,
-      createdAt: DateTime.parse(map['createdAt'] as String),
-      updatedAt: map['updatedAt'] != null
-          ? DateTime.parse(map['updatedAt'] as String)
-          : null,
+      createdAt: map['createdAt'] is int
+          ? DateTime.fromMillisecondsSinceEpoch(map['createdAt'] as int)
+          : DateTime.parse(map['createdAt'].toString()),
+      updatedAt: map['updatedAt'] == null
+          ? null
+          : map['updatedAt'] is int
+              ? DateTime.fromMillisecondsSinceEpoch(map['updatedAt'] as int)
+              : DateTime.parse(map['updatedAt'].toString()),
       notes: map['notes'] as String?,
       receiptPath: map['receiptPath'] as String?,
       syncStatus: SyncStatus.values.firstWhere(

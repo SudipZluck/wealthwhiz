@@ -6,3 +6,4 @@ export 'transactions_screen.dart';
 export 'budget_screen.dart';
 export 'goals_screen.dart';
 export 'profile_screen.dart';
+export 'transaction_form_screen.dart';

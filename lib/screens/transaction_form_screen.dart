@@ -7,6 +7,7 @@ import '../constants/constants.dart';
 import '../models/models.dart';
 import '../services/services.dart';
 import '../widgets/widgets.dart';
+import '../utils/utils.dart';
 
 class TransactionFormScreen extends StatefulWidget {
   final Transaction? transaction;
@@ -21,6 +22,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _notesController = TextEditingController();
+  final _sourceController = TextEditingController();
   final _imagePicker = ImagePicker();
 
   TransactionType _type = TransactionType.expense;
@@ -29,15 +31,22 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   File? _receiptImage;
   bool _isSaving = false;
 
+  Budget? _selectedBudget;
+  List<Budget> _availableBudgets = [];
+
   @override
   void initState() {
     super.initState();
+    _loadBudgets();
     if (widget.transaction != null) {
       _type = widget.transaction!.type;
       _category = widget.transaction!.category;
       _date = widget.transaction!.date;
       _amountController.text = widget.transaction!.amount.toString();
       _notesController.text = widget.transaction!.notes ?? '';
+      if (_category == TransactionCategory.other) {
+        _sourceController.text = widget.transaction!.description;
+      }
       if (widget.transaction!.receiptPath != null) {
         _receiptImage = File(widget.transaction!.receiptPath!);
       }
@@ -48,13 +57,40 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   void dispose() {
     _amountController.dispose();
     _notesController.dispose();
+    _sourceController.dispose();
     super.dispose();
   }
 
   Future<void> _pickImage() async {
+    final source = await showDialog<ImageSource>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Select Image Source'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Camera'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Gallery'),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (source == null) return;
+
     try {
       final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.camera,
+        source: source,
         imageQuality: 70,
       );
       if (image != null) {
@@ -70,31 +106,57 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   }
 
   Future<String?> _saveReceiptImage() async {
+    print('_saveReceiptImage: Starting to save receipt image');
     if (_receiptImage == null) return null;
     try {
       final directory = await getApplicationDocumentsDirectory();
       final String fileName = 'receipt_${const Uuid().v4()}.jpg';
       final String filePath = '${directory.path}/$fileName';
       await _receiptImage!.copy(filePath);
+      print('_saveReceiptImage: Successfully saved image to $filePath');
       return filePath;
     } catch (e) {
+      print('_saveReceiptImage: Error saving image - $e');
       return null;
     }
   }
 
+  Future<void> _loadBudgets() async {
+    try {
+      final budgetService = BudgetService();
+      final budgets = await budgetService.getBudgets();
+      setState(() {
+        _availableBudgets = budgets;
+      });
+    } catch (e) {
+      print('Failed to load budgets: $e');
+    }
+  }
+
   Future<void> _saveTransaction() async {
-    if (!_formKey.currentState!.validate()) return;
+    print('_saveTransaction: Starting to save transaction');
+    if (!_formKey.currentState!.validate()) {
+      print('_saveTransaction: Form validation failed');
+      return;
+    }
 
     setState(() => _isSaving = true);
 
     try {
       final String? receiptPath = await _saveReceiptImage();
+      print('_saveTransaction: Receipt path - $receiptPath');
+
+      final String description = _category == TransactionCategory.other
+          ? _sourceController.text
+          : (_notesController.text.isEmpty
+              ? 'No description'
+              : _notesController.text);
+      print('_saveTransaction: Description - $description');
+
       final transaction = Transaction(
         id: widget.transaction?.id ?? const Uuid().v4(),
         userId: 'current_user_id', // TODO: Get from auth service
-        description: _notesController.text.isEmpty
-            ? 'No description'
-            : _notesController.text,
+        description: description,
         type: _type,
         category: _category,
         amount: double.parse(_amountController.text),
@@ -102,21 +164,61 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
         notes: _notesController.text.isEmpty ? null : _notesController.text,
         receiptPath: receiptPath ?? widget.transaction?.receiptPath,
         syncStatus: SyncStatus.pending,
+        isRecurring: false, // Add missing required fields
+        createdAt: DateTime.now(),
       );
+      print(
+          '_saveTransaction: Created transaction object - ${transaction.toMap()}');
 
       // Save to local storage
       await TransactionService.instance.saveTransaction(transaction);
+      print('_saveTransaction: Saved to local storage');
 
       // Try to sync with Firestore if online
       await TransactionService.instance.syncTransactions();
+      print('_saveTransaction: Synced with Firestore');
+
+      if (_selectedBudget != null) {
+        // Update budget spent amount
+        // This would be handled by your budget tracking logic
+      }
 
       if (mounted) {
+        print('_saveTransaction: Successfully completed, closing screen');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 8),
+                Text(widget.transaction == null
+                    ? 'Transaction added successfully'
+                    : 'Transaction updated successfully'),
+              ],
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
         Navigator.pop(context);
       }
     } catch (e) {
+      print('_saveTransaction: Error occurred - $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save transaction')),
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Failed to save transaction: $e')),
+              ],
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
         );
       }
     } finally {
@@ -127,22 +229,31 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   }
 
   Future<void> _deleteTransaction() async {
-    if (widget.transaction == null) return;
+    print('_deleteTransaction: Starting to delete transaction');
+    if (widget.transaction == null) {
+      print('_deleteTransaction: No transaction to delete');
+      return;
+    }
 
     setState(() => _isSaving = true);
 
     try {
       await TransactionService.instance
           .deleteTransaction(widget.transaction!.id);
+      print('_deleteTransaction: Deleted from local storage');
+
       await TransactionService.instance.syncTransactions();
+      print('_deleteTransaction: Synced with Firestore');
 
       if (mounted) {
+        print('_deleteTransaction: Successfully completed, closing screen');
         Navigator.pop(context);
       }
     } catch (e) {
+      print('_deleteTransaction: Error occurred - $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to delete transaction')),
+          SnackBar(content: Text('Failed to delete transaction: $e')),
         );
       }
     } finally {
@@ -198,6 +309,39 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
             const SizedBox(height: AppConstants.paddingLarge),
 
             // Amount
+            if (_type == TransactionType.expense &&
+                _availableBudgets.isNotEmpty) ...[
+              const SizedBox(height: AppConstants.paddingMedium),
+              DropdownButtonFormField<Budget>(
+                value: _selectedBudget,
+                decoration: const InputDecoration(
+                  labelText: 'Apply to Budget',
+                  prefixIcon: Icon(Icons.account_balance_wallet),
+                ),
+                items: [
+                  const DropdownMenuItem<Budget>(
+                    value: null,
+                    child: Text('No Budget'),
+                  ),
+                  ..._availableBudgets
+                      .where((b) => b.category == _category)
+                      .map((budget) {
+                    final amount =
+                        CurrencyFormatter.format(budget.amount, Currency.usd);
+                    return DropdownMenuItem<Budget>(
+                      value: budget,
+                      child: Text(
+                          '${budget.customCategory ?? budget.category.name} ($amount)'),
+                    );
+                  }).toList(),
+                ],
+                onChanged: (Budget? value) {
+                  setState(() {
+                    _selectedBudget = value;
+                  });
+                },
+              ),
+            ],
             TextFormField(
               controller: _amountController,
               decoration: const InputDecoration(
@@ -246,6 +390,24 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
               },
             ),
             const SizedBox(height: AppConstants.paddingMedium),
+
+            // Custom Source Field (for 'other' category)
+            if (_category == TransactionCategory.other) ...[
+              TextFormField(
+                controller: _sourceController,
+                decoration: const InputDecoration(
+                  labelText: 'Source',
+                  hintText: 'Enter source of income/expense',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter the source';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppConstants.paddingMedium),
+            ],
 
             // Date
             ListTile(

@@ -1,9 +1,80 @@
 import 'package:flutter/material.dart';
 import '../constants/constants.dart';
+import '../models/models.dart';
+import '../services/services.dart';
 import '../widgets/widgets.dart';
+import '../utils/utils.dart';
+import 'budget_form_screen.dart';
+import 'budget_category_details_screen.dart';
 
-class BudgetScreen extends StatelessWidget {
+class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
+
+  @override
+  State<BudgetScreen> createState() => _BudgetScreenState();
+}
+
+class _BudgetScreenState extends State<BudgetScreen> {
+  bool _isLoading = false;
+  List<Budget> _budgets = [];
+  BudgetFrequency _selectedFrequency = BudgetFrequency.monthly;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBudgets();
+  }
+
+  Future<void> _loadBudgets() async {
+    setState(() => _isLoading = true);
+    try {
+      final budgetService = BudgetService();
+      final budgets = await budgetService.getBudgets();
+      setState(() {
+        _budgets = budgets;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to load budgets: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  List<Budget> get _filteredBudgets {
+    return _budgets.where((b) => b.frequency == _selectedFrequency).toList();
+  }
+
+  double get _totalBudget {
+    return _filteredBudgets.fold(0, (sum, budget) => sum + budget.amount);
+  }
+
+  double get _totalSpent {
+    // TODO: Calculate actual spent amount from transactions
+    return _filteredBudgets.fold(0,
+        (sum, budget) => sum + (budget.amount * 0.65)); // Temporary calculation
+  }
+
+  double get _totalRemaining {
+    return _totalBudget - _totalSpent;
+  }
+
+  Future<void> _addBudget() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const BudgetFormScreen(),
+      ),
+    );
+
+    if (result == true) {
+      _loadBudgets();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,153 +83,193 @@ class BudgetScreen extends StatelessWidget {
     return Scaffold(
       appBar: CustomAppBar(
         title: 'Budget',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_today),
-            onPressed: () {
-              // TODO: Show month selector
-            },
-          ),
-        ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async {
-          // TODO: Implement refresh
-        },
-        child: ListView(
-          padding: const EdgeInsets.all(AppConstants.paddingMedium),
-          children: [
-            // Total Budget Overview
-            CustomCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        onRefresh: _loadBudgets,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView(
+                padding: const EdgeInsets.all(AppConstants.paddingMedium),
                 children: [
-                  const CustomCardHeader(
-                    title: 'Monthly Overview',
-                    subtitle: 'March 2024',
-                  ),
-                  const SizedBox(height: AppConstants.paddingMedium),
+                  // Frequency Filter
                   Row(
-                    children: [
-                      Expanded(
-                        child: _buildBudgetStat(
-                          context,
-                          'Total Budget',
-                          '\$5,000.00',
-                          Icons.account_balance_wallet,
-                          theme.colorScheme.primary,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: BudgetFrequency.values.map((frequency) {
+                      final isSelected = frequency == _selectedFrequency;
+                      return Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppConstants.paddingSmall / 2,
+                          ),
+                          child: FilterChip(
+                            label: Text(
+                              frequency
+                                      .toString()
+                                      .split('.')
+                                      .last
+                                      .substring(0, 1)
+                                      .toUpperCase() +
+                                  frequency
+                                      .toString()
+                                      .split('.')
+                                      .last
+                                      .substring(1)
+                                      .toLowerCase(),
+                              textAlign: TextAlign.center,
+                            ),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              if (selected) {
+                                setState(() {
+                                  _selectedFrequency = frequency;
+                                });
+                              }
+                            },
+                            labelPadding: EdgeInsets.zero,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: AppConstants.paddingMedium),
-                      Expanded(
-                        child: _buildBudgetStat(
-                          context,
-                          'Spent',
-                          '\$3,250.75',
-                          Icons.shopping_cart,
-                          Colors.red,
-                        ),
-                      ),
-                      const SizedBox(width: AppConstants.paddingMedium),
-                      Expanded(
-                        child: _buildBudgetStat(
-                          context,
-                          'Remaining',
-                          '\$1,749.25',
-                          Icons.savings,
-                          Colors.green,
-                        ),
-                      ),
-                    ],
+                      );
+                    }).toList(),
                   ),
                   const SizedBox(height: AppConstants.paddingMedium),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: 0.65, // 3250.75 / 5000.00
-                      backgroundColor:
-                          theme.colorScheme.primary.withOpacity(0.1),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        theme.colorScheme.primary,
-                      ),
-                      minHeight: 8,
+
+                  // Total Budget Overview
+                  CustomCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CustomCardHeader(
+                          title:
+                              '${_selectedFrequency.toString().split('.').last} Overview',
+                          subtitle: DateFormatter.getMonthYear(DateTime.now()),
+                        ),
+                        const SizedBox(height: AppConstants.paddingMedium),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildBudgetStat(
+                                context,
+                                'Total Budget',
+                                CurrencyFormatter.format(
+                                    _totalBudget, Currency.usd),
+                                Icons.account_balance_wallet,
+                                theme.colorScheme.primary,
+                              ),
+                            ),
+                            const SizedBox(width: AppConstants.paddingMedium),
+                            Expanded(
+                              child: _buildBudgetStat(
+                                context,
+                                'Spent',
+                                CurrencyFormatter.format(
+                                    _totalSpent, Currency.usd),
+                                Icons.shopping_cart,
+                                Colors.red,
+                              ),
+                            ),
+                            const SizedBox(width: AppConstants.paddingMedium),
+                            Expanded(
+                              child: _buildBudgetStat(
+                                context,
+                                'Remaining',
+                                CurrencyFormatter.format(
+                                    _totalRemaining, Currency.usd),
+                                Icons.savings,
+                                Colors.green,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppConstants.paddingMedium),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: _totalBudget > 0
+                                ? _totalSpent / _totalBudget
+                                : 0,
+                            backgroundColor:
+                                theme.colorScheme.primary.withOpacity(0.1),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              theme.colorScheme.primary,
+                            ),
+                            minHeight: 8,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.paddingMedium),
+
+                  // Budget Categories
+                  CustomCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CustomCardHeader(
+                          title: 'Budget Categories',
+                          actions: _filteredBudgets.isNotEmpty
+                              ? [
+                                  IconButton(
+                                    icon: const Icon(Icons.add),
+                                    onPressed: _addBudget,
+                                    tooltip: 'Add Budget Category',
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        const SizedBox(height: AppConstants.paddingMedium),
+                        if (_filteredBudgets.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppConstants.paddingMedium,
+                              vertical: AppConstants.paddingLarge,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'No ${_selectedFrequency.toString().split('.').last.toLowerCase()} budget categories set up yet',
+                                  textAlign: TextAlign.center,
+                                  style: AppConstants.bodyLarge,
+                                ),
+                                const SizedBox(
+                                    height: AppConstants.paddingLarge),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: CustomButton(
+                                    text: 'Add Budget',
+                                    onPressed: _addBudget,
+                                    icon: Icons.add,
+                                    height: 54.0,
+                                  ),
+                                ),
+                                const SizedBox(
+                                    height: AppConstants.paddingMedium),
+                              ],
+                            ),
+                          )
+                        else
+                          ..._filteredBudgets
+                              .map((budget) => _buildBudgetCategory(
+                                    context,
+                                    budget.customCategory ??
+                                        budget.category
+                                            .toString()
+                                            .split('.')
+                                            .last,
+                                    budget.amount *
+                                        0.65, // TODO: Replace with actual spent amount
+                                    budget.amount,
+                                    Colors.purple, // TODO: Add category colors
+                                    Icons.category, // TODO: Add category icons
+                                  )),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: AppConstants.paddingMedium),
-
-            // Budget Categories
-            CustomCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CustomCardHeader(
-                    title: 'Budget Categories',
-                    actions: [
-                      IconButton(
-                        icon: const Icon(Icons.add),
-                        onPressed: () {
-                          // TODO: Add new budget category
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppConstants.paddingMedium),
-                  _buildBudgetCategory(
-                    context,
-                    'Shopping',
-                    850.0,
-                    1000.0,
-                    Colors.purple,
-                    Icons.shopping_bag,
-                  ),
-                  _buildBudgetCategory(
-                    context,
-                    'Food & Dining',
-                    450.0,
-                    600.0,
-                    Colors.orange,
-                    Icons.restaurant,
-                  ),
-                  _buildBudgetCategory(
-                    context,
-                    'Transportation',
-                    200.0,
-                    300.0,
-                    Colors.blue,
-                    Icons.directions_car,
-                  ),
-                  _buildBudgetCategory(
-                    context,
-                    'Entertainment',
-                    180.0,
-                    250.0,
-                    Colors.pink,
-                    Icons.movie,
-                  ),
-                  _buildBudgetCategory(
-                    context,
-                    'Bills & Utilities',
-                    1200.0,
-                    1500.0,
-                    Colors.green,
-                    Icons.receipt_long,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'budget_fab',
-        onPressed: () {
-          // TODO: Add new budget
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Add Budget'),
       ),
     );
   }
@@ -210,7 +321,21 @@ class BudgetScreen extends StatelessWidget {
 
     return CustomCard(
       onTap: () {
-        // TODO: Show category details
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BudgetCategoryDetailsScreen(
+              budget: _filteredBudgets.firstWhere(
+                (b) =>
+                    (b.customCategory ??
+                        b.category.toString().split('.').last) ==
+                    category,
+              ),
+              category: category,
+              totalBudget: total,
+            ),
+          ),
+        );
       },
       margin: const EdgeInsets.only(bottom: AppConstants.paddingMedium),
       child: Column(

@@ -1,0 +1,279 @@
+{
+  "project_info": {
+    "project_number": "420553219400",
+    "firebase_url": "https://testfb1237-default-rtdb.firebaseio.com",
+    "project_id": "testfb1237",
+    "storage_bucket": "testfb1237.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:420553219400:android:2aa7bbbacd40cdb558a77d",
+        "android_client_info": {
+          "package_name": "aj.nanoinventory.company.nano_inventory"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "420553219400-csk1hscsch0fc0kdedg5esv18fno8d3t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAH-WWmmkjq0e7QqeadJj1QuOBeLg7t1pQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "420553219400-2t3j1pcqtj215hbqquf4qr9nffcglaja.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "420553219400-27i063scdogu0eacdgpjdqp94bbt4612.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.eCommerceFirebase"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:420553219400:android:6986edec7844cb9258a77d",
+        "android_client_info": {
+          "package_name": "com.example.astro_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "420553219400-1lljfos43d9jidur96th1cn56p5uln0j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.astro_app",
+            "certificate_hash": "9bbb3186b2189ef16d8f272bdab59362c395cbb4"
+          }
+        },
+        {
+          "client_id": "420553219400-csk1hscsch0fc0kdedg5esv18fno8d3t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAH-WWmmkjq0e7QqeadJj1QuOBeLg7t1pQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "420553219400-2t3j1pcqtj215hbqquf4qr9nffcglaja.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "420553219400-27i063scdogu0eacdgpjdqp94bbt4612.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.eCommerceFirebase"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:420553219400:android:6b6f5ac98e03997358a77d",
+        "android_client_info": {
+          "package_name": "com.example.video_streaming"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "420553219400-csk1hscsch0fc0kdedg5esv18fno8d3t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAH-WWmmkjq0e7QqeadJj1QuOBeLg7t1pQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "420553219400-2t3j1pcqtj215hbqquf4qr9nffcglaja.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "420553219400-27i063scdogu0eacdgpjdqp94bbt4612.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.eCommerceFirebase"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:420553219400:android:539f7dc28f0e50c958a77d",
+        "android_client_info": {
+          "package_name": "com.example.wealthwhiz"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "420553219400-csk1hscsch0fc0kdedg5esv18fno8d3t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAH-WWmmkjq0e7QqeadJj1QuOBeLg7t1pQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "420553219400-2t3j1pcqtj215hbqquf4qr9nffcglaja.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "420553219400-27i063scdogu0eacdgpjdqp94bbt4612.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.eCommerceFirebase"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:420553219400:android:51a1ce7afa6d05b958a77d",
+        "android_client_info": {
+          "package_name": "com.flutterflow.hotelTemp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "420553219400-ais63csjic0h4puoo13ni8njp0u4878l.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.flutterflow.hotelTemp",
+            "certificate_hash": "9bbb3186b2189ef16d8f272bdab59362c395cbb4"
+          }
+        },
+        {
+          "client_id": "420553219400-csk1hscsch0fc0kdedg5esv18fno8d3t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAH-WWmmkjq0e7QqeadJj1QuOBeLg7t1pQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "420553219400-2t3j1pcqtj215hbqquf4qr9nffcglaja.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "420553219400-27i063scdogu0eacdgpjdqp94bbt4612.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.eCommerceFirebase"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:420553219400:android:97844e69763d511858a77d",
+        "android_client_info": {
+          "package_name": "com.mycompany.firstflutterflow"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "420553219400-csk1hscsch0fc0kdedg5esv18fno8d3t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAH-WWmmkjq0e7QqeadJj1QuOBeLg7t1pQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "420553219400-2t3j1pcqtj215hbqquf4qr9nffcglaja.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "420553219400-27i063scdogu0eacdgpjdqp94bbt4612.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.eCommerceFirebase"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:420553219400:android:6db3f86e81d2891958a77d",
+        "android_client_info": {
+          "package_name": "com.tauseef.whatsappclone"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "420553219400-csk1hscsch0fc0kdedg5esv18fno8d3t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAH-WWmmkjq0e7QqeadJj1QuOBeLg7t1pQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "420553219400-2t3j1pcqtj215hbqquf4qr9nffcglaja.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "420553219400-27i063scdogu0eacdgpjdqp94bbt4612.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.eCommerceFirebase"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -54,14 +54,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // Sample data - Replace with actual data from your backend
-    final transactions = _transactions;
+    // Calculate total balance, income, and expenses
+    double totalIncome = 0;
+    double totalExpenses = 0;
+    for (var transaction in _transactions) {
+      if (transaction.type == TransactionType.income) {
+        totalIncome += transaction.amount;
+      } else {
+        totalExpenses += transaction.amount;
+      }
+    }
+    double totalBalance = totalIncome - totalExpenses;
 
     // Calculate spending by category
     final Map<TransactionCategory, double> categorySpending = {};
     double totalSpent = 0;
 
-    for (var transaction in transactions) {
+    for (var transaction in _transactions) {
       if (transaction.type == TransactionType.expense) {
         categorySpending[transaction.category] =
             (categorySpending[transaction.category] ?? 0) + transaction.amount;
@@ -97,7 +106,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: AppConstants.paddingMedium),
                   Text(
-                    '\$12,345.67',
+                    '\$${totalBalance.toStringAsFixed(2)}',
                     style: AppConstants.headlineLarge.copyWith(
                       color: theme.colorScheme.primary,
                       fontWeight: FontWeight.bold,
@@ -110,7 +119,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: _buildStatCard(
                           context,
                           'Income',
-                          '\$8,250.00',
+                          '\$${totalIncome.toStringAsFixed(2)}',
                           Icons.arrow_upward,
                           Colors.green,
                         ),
@@ -120,7 +129,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: _buildStatCard(
                           context,
                           'Expenses',
-                          '\$3,850.00',
+                          '\$${totalExpenses.toStringAsFixed(2)}',
                           Icons.arrow_downward,
                           Colors.red,
                         ),
@@ -134,7 +143,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             // Spending Charts
             SpendingCharts(
-              transactions: transactions,
+              transactions: _transactions,
               totalSpent: totalSpent,
               categorySpending: categorySpending,
             ),

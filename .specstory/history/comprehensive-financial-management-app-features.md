@@ -35916,6 +35916,204 @@ The relevant error-causing widget was:
 
 ---
 
+_**Assistant**_
+
+This error occurs when the spending charts component receives empty or invalid data. Let's fix this by adding validation and default values in the SpendingCharts widget:
+
+---
+
+_**Assistant**_
+
+```
+class SpendingCharts extends StatefulWidget {
+  final List<Transaction> transactions;
+  final double totalSpent;
+  final Map<TransactionCategory, double> categorySpending;
+
+  const SpendingCharts({
+    super.key,
+    required this.transactions,
+    required this.totalSpent,
+    required this.categorySpending,
+  });
+
+  @override
+  State<SpendingCharts> createState() => _SpendingChartsState();
+}
+
+class _SpendingChartsState extends State<SpendingCharts> {
+  @override
+  Widget build(BuildContext context) {
+    // If there's no data, show a message
+    if (widget.transactions.isEmpty || widget.totalSpent == 0) {
+      return const CustomCard(
+        child: Padding(
+          padding: EdgeInsets.all(AppConstants.paddingLarge),
+          child: Center(
+            child: Text('No spending data available'),
+          ),
+        ),
+      );
+    }
+
+    return CustomCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const CustomCardHeader(
+            title: 'Spending Overview',
+            subtitle: 'Category breakdown',
+          ),
+          const SizedBox(height: AppConstants.paddingMedium),
+          SizedBox(
+            height: 200,
+            child: PieChart(
+              PieChartData(
+                sections: _buildPieChartSections(),
+                sectionsSpace: 2,
+                centerSpaceRadius: 40,
+                startDegreeOffset: -90,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppConstants.paddingMedium),
+          Column(
+            children: _buildLegendItems(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<PieChartSectionData> _buildPieChartSections() {
+    if (widget.categorySpending.isEmpty) return [];
+
+    final List<PieChartSectionData> sections = [];
+    widget.categorySpending.forEach((category, amount) {
+      final percentage = (amount / widget.totalSpent) * 100;
+      if (percentage > 0) { // Only add sections with positive values
+        sections.add(
+          PieChartSectionData(
+            value: amount,
+            title: '${percentage.toStringAsFixed(1)}%',
+            radius: 100,
+            color: _getCategoryColor(category),
+            titleStyle: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        );
+      }
+    });
+    return sections;
+  }
+
+  List<Widget> _buildLegendItems() {
+    if (widget.categorySpending.isEmpty) return [];
+
+    final List<Widget> items = [];
+    widget.categorySpending.forEach((category, amount) {
+      final percentage = (amount / widget.totalSpent) * 100;
+      if (percentage > 0) { // Only add legend items with positive values
+        items.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: 4,
+              horizontal: AppConstants.paddingMedium,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: _getCategoryColor(category),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _formatCategoryName(category.toString()),
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+                Text(
+                  '\$${amount.toStringAsFixed(2)} (${percentage.toStringAsFixed(1)}%)',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    });
+    return items;
+  }
+
+  Color _getCategoryColor(TransactionCategory category) {
+    switch (category) {
+      case TransactionCategory.food:
+        return Colors.orange;
+      case TransactionCategory.shopping:
+        return Colors.blue;
+      case TransactionCategory.entertainment:
+        return Colors.purple;
+      case TransactionCategory.utilities:
+        return Colors.green;
+      case TransactionCategory.salary:
+        return Colors.teal;
+      case TransactionCategory.investment:
+        return Colors.indigo;
+      case TransactionCategory.other:
+        return Colors.grey;
+      default:
+        return Colors.blueGrey;
+    }
+  }
+
+  String _formatCategoryName(String category) {
+    final name = category.split('.').last;
+    return name[0].toUpperCase() + name.substring(1).toLowerCase();
+  }
+}
+```
+
+---
+
+_**Assistant**_
+
+
+
+I've updated the SpendingCharts widget to:
+
+1. Add validation for empty data - if there are no transactions or total spent is 0, show a "No spending data available" message
+2. Only create pie chart sections and legend items for categories with positive spending values
+3. Handle the case when categorySpending is empty by returning empty lists for sections and legend items
+
+This should prevent the interval assertion error by:
+1. Not attempting to create charts when there's no data
+2. Only creating chart sections for categories with actual spending
+3. Providing appropriate fallback UI when there's no data to display
+
+The chart will now show:
+- A message when there's no data
+- Only categories with actual spending when there is data
+- Proper percentages and amounts in both the pie chart and legend
+
+---
+
+_**User**_
+
+add real data in total balance, income & expenses don't change UI
+
+---
+
 
 
 ---

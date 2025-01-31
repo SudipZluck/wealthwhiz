@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../constants/constants.dart';
 import '../models/user.dart';
 import '../services/firebase_service.dart';
@@ -141,7 +142,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           backgroundImage: _imageFile != null
                               ? FileImage(_imageFile!)
                               : _user.photoUrl != null
-                                  ? NetworkImage(_user.photoUrl!)
+                                  ? CachedNetworkImageProvider(_user.photoUrl!)
+                                      as ImageProvider
                                   : null,
                           backgroundColor:
                               theme.colorScheme.primary.withOpacity(0.1),

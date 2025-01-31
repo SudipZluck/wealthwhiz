@@ -76,6 +76,16 @@ class _BudgetScreenState extends State<BudgetScreen> {
     }
   }
 
+  String _formatCategoryName(String category) {
+    final name = category.split('.').last;
+    return name[0].toUpperCase() + name.substring(1).toLowerCase();
+  }
+
+  String _formatFrequencyName(BudgetFrequency frequency) {
+    final name = frequency.toString().split('.').last;
+    return name[0].toUpperCase() + name.substring(1).toLowerCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -92,114 +102,11 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 padding: const EdgeInsets.all(AppConstants.paddingMedium),
                 children: [
                   // Frequency Filter
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: BudgetFrequency.values.map((frequency) {
-                      final isSelected = frequency == _selectedFrequency;
-                      return Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppConstants.paddingSmall / 2,
-                          ),
-                          child: FilterChip(
-                            label: Text(
-                              frequency
-                                      .toString()
-                                      .split('.')
-                                      .last
-                                      .substring(0, 1)
-                                      .toUpperCase() +
-                                  frequency
-                                      .toString()
-                                      .split('.')
-                                      .last
-                                      .substring(1)
-                                      .toLowerCase(),
-                              textAlign: TextAlign.center,
-                            ),
-                            selected: isSelected,
-                            onSelected: (selected) {
-                              if (selected) {
-                                setState(() {
-                                  _selectedFrequency = frequency;
-                                });
-                              }
-                            },
-                            labelPadding: EdgeInsets.zero,
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
+                  _buildFrequencyFilter(),
                   const SizedBox(height: AppConstants.paddingMedium),
 
                   // Total Budget Overview
-                  CustomCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CustomCardHeader(
-                          title:
-                              '${_selectedFrequency.toString().split('.').last} Overview',
-                          subtitle: DateFormatter.getMonthYear(DateTime.now()),
-                        ),
-                        const SizedBox(height: AppConstants.paddingMedium),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildBudgetStat(
-                                context,
-                                'Total Budget',
-                                CurrencyFormatter.format(
-                                    _totalBudget, Currency.usd),
-                                Icons.account_balance_wallet,
-                                theme.colorScheme.primary,
-                              ),
-                            ),
-                            const SizedBox(width: AppConstants.paddingMedium),
-                            Expanded(
-                              child: _buildBudgetStat(
-                                context,
-                                'Spent',
-                                CurrencyFormatter.format(
-                                    _totalSpent, Currency.usd),
-                                Icons.shopping_cart,
-                                Colors.red,
-                              ),
-                            ),
-                            const SizedBox(width: AppConstants.paddingMedium),
-                            Expanded(
-                              child: _buildBudgetStat(
-                                context,
-                                'Remaining',
-                                CurrencyFormatter.format(
-                                    _totalRemaining, Currency.usd),
-                                Icons.savings,
-                                Colors.green,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppConstants.paddingMedium),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: _totalBudget > 0
-                                ? _totalSpent / _totalBudget
-                                : 0,
-                            backgroundColor:
-                                theme.colorScheme.primary.withOpacity(0.1),
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              theme.colorScheme.primary,
-                            ),
-                            minHeight: 8,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buildOverviewCard(),
                   const SizedBox(height: AppConstants.paddingMedium),
 
                   // Budget Categories
@@ -230,7 +137,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'No ${_selectedFrequency.toString().split('.').last.toLowerCase()} budget categories set up yet',
+                                  'No ${_formatFrequencyName(_selectedFrequency)} budget categories set up yet',
                                   textAlign: TextAlign.center,
                                   style: AppConstants.bodyLarge,
                                 ),
@@ -255,16 +162,15 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               .map((budget) => _buildBudgetCategory(
                                     context,
                                     budget.customCategory ??
-                                        budget.category
-                                            .toString()
-                                            .split('.')
-                                            .last,
+                                        _formatCategoryName(
+                                            budget.category.toString()),
                                     budget.amount *
                                         0.65, // TODO: Replace with actual spent amount
                                     budget.amount,
                                     Colors.purple, // TODO: Add category colors
                                     Icons.category, // TODO: Add category icons
-                                  )),
+                                  ))
+                              .toList(),
                       ],
                     ),
                   ),
@@ -369,6 +275,99 @@ class _BudgetScreenState extends State<BudgetScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildOverviewCard() {
+    return CustomCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CustomCardHeader(
+            title: '${_formatFrequencyName(_selectedFrequency)} Overview',
+            subtitle: DateFormatter.getMonthYear(DateTime.now()),
+          ),
+          const SizedBox(height: AppConstants.paddingMedium),
+          Row(
+            children: [
+              Expanded(
+                child: _buildBudgetStat(
+                  context,
+                  'Total Budget',
+                  CurrencyFormatter.format(_totalBudget, Currency.usd),
+                  Icons.account_balance_wallet,
+                  Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              const SizedBox(width: AppConstants.paddingMedium),
+              Expanded(
+                child: _buildBudgetStat(
+                  context,
+                  'Spent',
+                  CurrencyFormatter.format(_totalSpent, Currency.usd),
+                  Icons.shopping_cart,
+                  Colors.red,
+                ),
+              ),
+              const SizedBox(width: AppConstants.paddingMedium),
+              Expanded(
+                child: _buildBudgetStat(
+                  context,
+                  'Remaining',
+                  CurrencyFormatter.format(_totalRemaining, Currency.usd),
+                  Icons.savings,
+                  Colors.green,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppConstants.paddingMedium),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: _totalBudget > 0 ? _totalSpent / _totalBudget : 0,
+              backgroundColor:
+                  Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Theme.of(context).colorScheme.primary,
+              ),
+              minHeight: 8,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFrequencyFilter() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: BudgetFrequency.values.map((frequency) {
+        final isSelected = frequency == _selectedFrequency;
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.paddingSmall / 2,
+            ),
+            child: FilterChip(
+              label: Text(
+                _formatFrequencyName(frequency),
+                textAlign: TextAlign.center,
+              ),
+              selected: isSelected,
+              onSelected: (selected) {
+                if (selected) {
+                  setState(() {
+                    _selectedFrequency = frequency;
+                  });
+                }
+              },
+              labelPadding: EdgeInsets.zero,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

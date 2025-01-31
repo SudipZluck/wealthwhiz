@@ -91,9 +91,16 @@ class _BudgetFormScreenState extends State<BudgetFormScreen> {
 
     try {
       final budgetService = BudgetService();
+      final firebaseService = FirebaseService();
+      final currentUser = await firebaseService.getCurrentUser();
+
+      if (currentUser == null) {
+        throw Exception('No user is currently logged in');
+      }
+
       final budget = Budget(
         id: widget.budget?.id,
-        userId: 'current_user_id', // Replace with actual user ID
+        userId: currentUser.id,
         category: _selectedCategory,
         customCategory:
             _isCustomCategory ? _customCategoryController.text : null,
@@ -233,7 +240,12 @@ class _BudgetFormScreenState extends State<BudgetFormScreen> {
                     items: BudgetFrequency.values.map((frequency) {
                       return DropdownMenuItem(
                         value: frequency,
-                        child: Text(frequency.toString().split('.').last),
+                        child: Text(frequency
+                                .toString()
+                                .split('.')
+                                .last[0]
+                                .toUpperCase() +
+                            frequency.toString().split('.').last.substring(1)),
                       );
                     }).toList(),
                     onChanged: (value) {

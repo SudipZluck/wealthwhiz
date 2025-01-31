@@ -3,67 +3,59 @@ import '../constants/constants.dart';
 import '../models/models.dart';
 import '../widgets/widgets.dart';
 import '../widgets/spending_charts.dart';
+import '../services/services.dart';
 import 'transactions_screen.dart';
 import 'all_transactions_screen.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  List<Transaction> _transactions = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTransactions();
+  }
+
+  Future<void> _loadTransactions() async {
+    setState(() => _isLoading = true);
+    try {
+      final firebaseService = FirebaseService();
+      final currentUser = await firebaseService.getCurrentUser();
+      if (currentUser == null) {
+        throw Exception('No user is currently logged in');
+      }
+
+      final databaseService = DatabaseService();
+      final transactions =
+          await databaseService.getTransactions(currentUser.id);
+      setState(() {
+        _transactions = transactions;
+        _transactions.sort(
+            (a, b) => b.date.compareTo(a.date)); // Sort by date descending
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading transactions: $e')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     // Sample data - Replace with actual data from your backend
-    final transactions = [
-      Transaction(
-        userId: '1',
-        amount: 120.50,
-        date: DateTime.now().subtract(const Duration(days: 1)),
-        type: TransactionType.expense,
-        category: TransactionCategory.shopping,
-        description: 'Grocery Shopping',
-      ),
-      Transaction(
-        userId: '1',
-        amount: 45.00,
-        date: DateTime.now().subtract(const Duration(days: 2)),
-        type: TransactionType.expense,
-        category: TransactionCategory.food,
-        description: 'Restaurant',
-      ),
-      Transaction(
-        userId: '1',
-        amount: 3500.00,
-        date: DateTime.now().subtract(const Duration(days: 2)),
-        type: TransactionType.income,
-        category: TransactionCategory.salary,
-        description: 'Salary Deposit',
-      ),
-      Transaction(
-        userId: '1',
-        amount: 89.99,
-        date: DateTime.now().subtract(const Duration(days: 3)),
-        type: TransactionType.expense,
-        category: TransactionCategory.entertainment,
-        description: 'Movie and Dinner',
-      ),
-      Transaction(
-        userId: '1',
-        amount: 15.99,
-        date: DateTime.now().subtract(const Duration(days: 3)),
-        type: TransactionType.expense,
-        category: TransactionCategory.entertainment,
-        description: 'Netflix Subscription',
-      ),
-      Transaction(
-        userId: '1',
-        amount: 250.00,
-        date: DateTime.now().subtract(const Duration(days: 4)),
-        type: TransactionType.expense,
-        category: TransactionCategory.utilities,
-        description: 'Electricity Bill',
-      ),
-    ];
+    final transactions = _transactions;
 
     // Calculate spending by category
     final Map<TransactionCategory, double> categorySpending = {};
@@ -90,9 +82,7 @@ class DashboardScreen extends StatelessWidget {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async {
-          // TODO: Implement refresh
-        },
+        onRefresh: _loadTransactions,
         child: ListView(
           padding: const EdgeInsets.all(AppConstants.paddingMedium),
           children: [
@@ -172,30 +162,30 @@ class DashboardScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: AppConstants.paddingMedium),
-                  _buildTransactionItem(
-                    context,
-                    'Grocery Shopping',
-                    '\$120.50',
-                    'Today',
-                    Icons.shopping_cart,
-                    Colors.orange,
-                  ),
-                  _buildTransactionItem(
-                    context,
-                    'Salary Deposit',
-                    '+\$3,500.00',
-                    'Yesterday',
-                    Icons.account_balance_wallet,
-                    Colors.green,
-                  ),
-                  _buildTransactionItem(
-                    context,
-                    'Netflix Subscription',
-                    '\$15.99',
-                    '2 days ago',
-                    Icons.movie,
-                    Colors.red,
-                  ),
+                  if (_isLoading)
+                    const Center(child: CircularProgressIndicator())
+                  else if (_transactions.isEmpty)
+                    const Center(
+                      child: Text('No recent transactions'),
+                    )
+                  else
+                    Column(
+                      children: _transactions
+                          .take(3) // Show only the 3 most recent transactions
+                          .map((transaction) => _buildTransactionItem(
+                                context,
+                                transaction.description,
+                                transaction.type == TransactionType.income
+                                    ? '+\$${transaction.amount.toStringAsFixed(2)}'
+                                    : '\$${transaction.amount.toStringAsFixed(2)}',
+                                _getRelativeDate(transaction.date),
+                                _getCategoryIcon(transaction.category),
+                                transaction.type == TransactionType.income
+                                    ? Colors.green
+                                    : Colors.red,
+                              ))
+                          .toList(),
+                    ),
                 ],
               ),
             ),
@@ -203,6 +193,40 @@ class DashboardScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _getRelativeDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays == 0) {
+      return 'Today';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else {
+      return '${difference.inDays} days ago';
+    }
+  }
+
+  IconData _getCategoryIcon(TransactionCategory category) {
+    switch (category) {
+      case TransactionCategory.food:
+        return Icons.restaurant;
+      case TransactionCategory.shopping:
+        return Icons.shopping_cart;
+      case TransactionCategory.entertainment:
+        return Icons.movie;
+      case TransactionCategory.utilities:
+        return Icons.flash_on;
+      case TransactionCategory.salary:
+        return Icons.work;
+      case TransactionCategory.investment:
+        return Icons.trending_up;
+      case TransactionCategory.other:
+        return Icons.category;
+      default:
+        return Icons.attach_money;
+    }
   }
 
   Widget _buildStatCard(

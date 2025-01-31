@@ -72,6 +72,18 @@ class _SpendingChartsState extends State<SpendingCharts> {
 
   @override
   Widget build(BuildContext context) {
+    // If there's no data, show a message
+    if (widget.transactions.isEmpty || widget.totalSpent == 0) {
+      return const CustomCard(
+        child: Padding(
+          padding: EdgeInsets.all(AppConstants.paddingLarge),
+          child: Center(
+            child: Text('No spending data available'),
+          ),
+        ),
+      );
+    }
+
     return CustomCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

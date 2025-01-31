@@ -175,7 +175,18 @@ class _BudgetFormScreenState extends State<BudgetFormScreen> {
                       items: _availableCategories.map((category) {
                         return DropdownMenuItem(
                           value: category,
-                          child: Text(category.toString().split('.').last),
+                          child: Text(
+                            category
+                                    .toString()
+                                    .split('.')
+                                    .last[0]
+                                    .toUpperCase() +
+                                category
+                                    .toString()
+                                    .split('.')
+                                    .last
+                                    .substring(1),
+                          ),
                         );
                       }).toList(),
                       onChanged: _onCategoryChanged,

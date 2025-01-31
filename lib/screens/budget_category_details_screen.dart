@@ -90,7 +90,7 @@ class _BudgetCategoryDetailsScreenState
 
     return Scaffold(
       appBar: CustomAppBar(
-        title: widget.category,
+        title: widget.category[0].toUpperCase() + widget.category.substring(1),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),

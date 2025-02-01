@@ -144,6 +144,11 @@ class _BudgetFormScreenState extends State<BudgetFormScreen> {
     }
   }
 
+  String _formatCategoryName(String category) {
+    final name = category.split('.').last;
+    return name[0].toUpperCase() + name.substring(1).toLowerCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -177,28 +182,26 @@ class _BudgetFormScreenState extends State<BudgetFormScreen> {
                       value: _selectedCategory,
                       decoration: const InputDecoration(
                         labelText: 'Category',
-                        prefixIcon: Icon(Icons.category),
+                        border: OutlineInputBorder(),
                       ),
-                      items: _availableCategories.map((category) {
-                        return DropdownMenuItem(
-                          value: category,
-                          child: Text(
-                            category
-                                    .toString()
-                                    .split('.')
-                                    .last[0]
-                                    .toUpperCase() +
-                                category
-                                    .toString()
-                                    .split('.')
-                                    .last
-                                    .substring(1),
-                          ),
-                        );
-                      }).toList(),
+                      items: TransactionCategory.values
+                          .where((category) => ![
+                                TransactionCategory.salary,
+                                TransactionCategory.freelance,
+                                TransactionCategory.business,
+                                TransactionCategory.investment,
+                              ].contains(category))
+                          .map((category) => DropdownMenuItem(
+                                value: category,
+                                child: Text(
+                                    _formatCategoryName(category.toString())),
+                              ))
+                          .toList(),
                       onChanged: _onCategoryChanged,
                       validator: (value) {
-                        if (value == null) return 'Please select a category';
+                        if (value == null) {
+                          return 'Please select a category';
+                        }
                         return null;
                       },
                     ),

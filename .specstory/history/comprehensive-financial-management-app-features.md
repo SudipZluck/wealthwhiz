@@ -37923,7 +37923,81 @@ _**Assistant**_
 
 
 
-Let me fix this by rever
+Let me fix this by reverting to the original `_getMaxSpending` method but ensuring it never returns zero:
+
+---
+
+_**Assistant**_
+
+```
+// ... existing code ...
+double _getMaxSpending() {
+  final spendingData = _getBarChartData();
+  return spendingData.isEmpty ? 100 : max(1, spendingData.reduce((max, value) => value > max ? value : max));
+}
+// ... existing code ...
+```
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+I've fixed the chart interval issue by:
+1. Ensuring the left titles interval is never zero by using `max(1, _getMaxSpending() / 4)`
+2. Ensuring the maximum spending value is never zero by using `max(1, ...)` in the `_getMaxSpending` method
+3. Maintaining the existing bottom titles interval fix
+
+This should prevent the zero interval error when switching between different time periods while preserving the UI.
+
+---
+
+_**User**_
+
+════════ Exception caught by widgets library ═══════════════════════════════════
+The following assertion was thrown building BudgetFormScreen(dirty, state: _BudgetFormScreenState#0ecb7):
+There should be exactly one item with [DropdownButton]'s value: TransactionCategory.food. 
+Either zero or 2 or more [DropdownMenuItem]s were detected with the same value
+'package:flutter/src/material/dropdown.dart':
+Failed assertion: line 1604 pos 15: 'items == null || items.isEmpty || value == null ||
+              items.where((DropdownMenuItem<T> item) {
+                return item.value == value;
+              }).length == 1'
+
+The relevant error-causing widget was:
+    BudgetFormScreen BudgetFormScreen:file:///Users/mac/Downloads/wealthwhiz/lib/screens/budget_screen.dart:70:37
+
+When the exception was thrown, this was the stack:
+#2      new DropdownButtonFormField (package:flutter/src/material/dropdown.dart:1604:15)
+dropdown.dart:1604
+#3      _BudgetFormScreenState.build (package:wealthwhiz/screens/budget_form_screen.dart:176:21)
+
+---
+
+_**Assistant**_
+
+
+
+I understand the issue. The error occurs because there are duplicate values in the dropdown items for transaction categories. Let me fix this in the budget form screen:
+
+---
+
+_**Assistant**_
+
+```
+undefined
+```
+
+---
+
+_**Assistant**_
+
+
 
 ---
 

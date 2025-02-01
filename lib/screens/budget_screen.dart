@@ -227,16 +227,16 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
     return CustomCard(
       onTap: () {
+        final selectedBudget = _filteredBudgets.firstWhere(
+          (b) => _formatCategoryName(b.category.toString()) == category,
+          orElse: () => throw Exception('Budget not found'),
+        );
+
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => BudgetCategoryDetailsScreen(
-              budget: _filteredBudgets.firstWhere(
-                (b) =>
-                    (b.customCategory ??
-                        b.category.toString().split('.').last) ==
-                    category,
-              ),
+              budget: selectedBudget,
               category: category,
               totalBudget: total,
             ),

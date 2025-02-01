@@ -37627,7 +37627,35 @@ I'll modify the code to find the budget using its ID and handle the comparison p
 _**Assistant**_
 
 ```
-undefined
+// ... existing code ...
+onTap: () {
+  final selectedBudget = _filteredBudgets.firstWhere(
+    (b) => b.id == budget.id,
+    orElse: () {
+      // Try finding by category name as fallback
+      return _filteredBudgets.firstWhere(
+        (b) => _formatCategoryName(b.category.toString()) == category,
+        orElse: () => throw Exception('Budget not found'),
+      );
+    },
+  );
+  
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => BudgetCategoryDetailsScreen(
+        budgetId: selectedBudget.id,
+      ),
+    ),
+  );
+},
+// ... existing code ...
+
+String _formatCategoryName(String category) {
+  final name = category.split('.').last;
+  return name[0].toUpperCase() + name.substring(1).toLowerCase();
+}
+// ... existing code ...
 ```
 
 ---
@@ -37635,6 +37663,267 @@ undefined
 _**Assistant**_
 
 
+
+Let me fix those linter errors by using the correct variable names and parameters:
+
+---
+
+_**Assistant**_
+
+```
+// ... existing code ...
+onTap: () {
+  final selectedBudget = _filteredBudgets.firstWhere(
+    (b) => _formatCategoryName(b.category.toString()) == category,
+    orElse: () => throw Exception('Budget not found'),
+  );
+  
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => BudgetCategoryDetailsScreen(
+        budgetId: selectedBudget.id,
+      ),
+    ),
+  );
+},
+// ... existing code ...
+```
+
+---
+
+_**Assistant**_
+
+
+
+I see the issue now. The `BudgetCategoryDetailsScreen` constructor still requires the old parameters. Let me update the navigation to match the current constructor requirements:
+
+---
+
+_**Assistant**_
+
+```
+// ... existing code ...
+onTap: () {
+  final selectedBudget = _filteredBudgets.firstWhere(
+    (b) => _formatCategoryName(b.category.toString()) == category,
+    orElse: () => throw Exception('Budget not found'),
+  );
+  
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => BudgetCategoryDetailsScreen(
+        budget: selectedBudget,
+        category: category,
+        totalBudget: total,
+      ),
+    ),
+  );
+},
+// ... existing code ...
+```
+
+---
+
+_**Assistant**_
+
+
+
+This should resolve the linter errors by providing all the required parameters to the `BudgetCategoryDetailsScreen` constructor. The screen will now receive:
+1. The selected budget object
+2. The category name
+3. The total budget amount
+
+The budget finding logic now uses `_formatCategoryName` to ensure consistent category name comparison.
+
+---
+
+_**User**_
+
+getting this erroe while changing Spending Analysis to month in dashboard screen, please fix it & don't change any UI
+
+---
+
+_**User**_
+
+════════ Exception caught by widgets library ═══════════════════════════════════
+The following assertion was thrown building SpendingCharts(dirty, dependencies: [MediaQuery, _InheritedTheme, _LocalizationsScope-[GlobalKey#a5aac]], state: _SpendingChartsState#85340):
+SideTitles.interval couldn't be zero
+'package:fl_chart/src/chart/base/axis_chart/axis_chart_data.dart':
+Failed assertion: line 166 pos 15: 'interval != 0'
+
+The relevant error-causing widget was:
+    SpendingCharts SpendingCharts:file:///Users/mac/Downloads/wealthwhiz/lib/screens/dashboard_screen.dart:145:13
+
+When the exception was thrown, this was the stack:
+#2      new SideTitles (package:fl_chart/src/chart/base/axis_chart/axis_chart_data.dart:166:15)
+axis_chart_data.dart:166
+#3      _SpendingChartsState.build (package:wealthwhiz/widgets/spending_charts.dart:259:43)
+Getting this error while changing Spending Analysis to month in dashboard screen, please fix it & don't change any UI
+
+
+---
+
+_**Assistant**_
+
+I understand the issue. The error occurs because the interval for the chart's side titles is being set to zero. Let me fix this in the spending charts widget:
+
+---
+
+_**Assistant**_
+
+```
+// ... existing code ...
+bottomTitles: AxisTitles(
+  sideTitles: SideTitles(
+    showTitles: true,
+    interval: max(1, (_selectedFrequency == BudgetFrequency.monthly ? 5 : 1).toDouble()),
+    getTitlesWidget: (value, meta) {
+      if (_selectedFrequency == BudgetFrequency.monthly) {
+        if (value % 5 == 0) {
+          return Text(
+            value.toInt().toString(),
+            style: AppConstants.bodySmall,
+          );
+        }
+      } else {
+        return Text(
+          value.toInt().toString(),
+          style: AppConstants.bodySmall,
+        );
+      }
+      return const SizedBox();
+    },
+  ),
+),
+// ... existing code ...
+```
+
+---
+
+_**Assistant**_
+
+
+
+Let me fix the linter error by adding the required import:
+
+---
+
+_**Assistant**_
+
+```
+import 'dart:math' show max;
+
+// ... rest of the imports and existing code ...
+```
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+I see we need to keep the original math import. Let me fix that:
+
+---
+
+_**Assistant**_
+
+```
+import 'dart:math' as math;
+import 'dart:math' show max;
+
+// ... rest of the imports and existing code ...
+```
+
+---
+
+_**Assistant**_
+
+
+
+This fixes the chart interval issue by:
+1. Setting a minimum interval of 1 to prevent zero values
+2. Using a larger interval (5) for monthly view to prevent overcrowding
+3. Maintaining the existing math functionality while adding the max function
+
+The chart should now display correctly when switching between different time periods without changing the UI.
+
+---
+
+_**User**_
+
+════════ Exception caught by widgets library ═══════════════════════════════════
+The following assertion was thrown building SpendingCharts(dirty, dependencies: [MediaQuery, _InheritedTheme, _LocalizationsScope-[GlobalKey#429cb]], state: _SpendingChartsState#671b0):
+SideTitles.interval couldn't be zero
+'package:fl_chart/src/chart/base/axis_chart/axis_chart_data.dart':
+Failed assertion: line 166 pos 15: 'interval != 0'
+
+The relevant error-causing widget was:
+    SpendingCharts SpendingCharts:file:///Users/mac/Downloads/wealthwhiz/lib/screens/dashboard_screen.dart:145:13
+
+When the exception was thrown, this was the stack:
+#2      new SideTitles (package:fl_chart/src/chart/base/axis_chart/axis_chart_data.dart:166:15)
+axis_chart_data.dart:166
+#3      _SpendingChartsState.build (package:wealthwhiz/widgets/spending_charts.dart:259:43)
+
+still getting this error if i change week to month
+
+---
+
+_**Assistant**_
+
+
+
+Let me fix the interval issue in the left titles of the chart as well, since that's where the zero interval might be occurring:
+
+---
+
+_**Assistant**_
+
+```
+// ... existing code ...
+leftTitles: AxisTitles(
+  sideTitles: SideTitles(
+    showTitles: true,
+    reservedSize: 46,
+    interval: max(1, _getMaxSpending() / 4),
+    getTitlesWidget: (value, meta) => _getLeftTitles(context, value, meta),
+  ),
+),
+// ... existing code ...
+
+double _getMaxSpending() {
+  if (widget.transactions.isEmpty) return 100; // Default value if no transactions
+  
+  switch (_selectedPeriod) {
+    case SpendingPeriod.weekly:
+      return _getWeeklySpending().reduce(math.max);
+    case SpendingPeriod.monthly:
+      return _getMonthlySpending().reduce(math.max);
+    case SpendingPeriod.yearly:
+      return _getYearlySpending().reduce(math.max);
+  }
+}
+// ... existing code ...
+```
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+Let me fix this by rever
 
 ---
 

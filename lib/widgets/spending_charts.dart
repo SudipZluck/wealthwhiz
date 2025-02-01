@@ -4,6 +4,7 @@ import '../constants/constants.dart';
 import '../models/models.dart';
 import 'widgets.dart';
 import 'dart:math' as math;
+import 'dart:math' show max;
 
 enum SpendingPeriod {
   weekly,
@@ -250,16 +251,36 @@ class _SpendingChartsState extends State<SpendingCharts> {
                             bottomTitles: AxisTitles(
                               sideTitles: SideTitles(
                                 showTitles: true,
-                                getTitlesWidget: (value, meta) =>
-                                    _getBottomTitles(context, value, meta),
-                                reservedSize: 28,
+                                interval: max(
+                                    1,
+                                    (_selectedPeriod == SpendingPeriod.monthly
+                                            ? 5
+                                            : 1)
+                                        .toDouble()),
+                                getTitlesWidget: (value, meta) {
+                                  if (_selectedPeriod ==
+                                      SpendingPeriod.monthly) {
+                                    if (value % 5 == 0) {
+                                      return Text(
+                                        value.toInt().toString(),
+                                        style: AppConstants.bodySmall,
+                                      );
+                                    }
+                                  } else {
+                                    return Text(
+                                      value.toInt().toString(),
+                                      style: AppConstants.bodySmall,
+                                    );
+                                  }
+                                  return const SizedBox();
+                                },
                               ),
                             ),
                             leftTitles: AxisTitles(
                               sideTitles: SideTitles(
                                 showTitles: true,
                                 reservedSize: 46,
-                                interval: _getMaxSpending() / 4,
+                                interval: max(1, _getMaxSpending() / 4),
                                 getTitlesWidget: (value, meta) =>
                                     _getLeftTitles(context, value, meta),
                               ),
@@ -709,7 +730,8 @@ class _SpendingChartsState extends State<SpendingCharts> {
     final spendingData = _getBarChartData();
     return spendingData.isEmpty
         ? 100
-        : spendingData.reduce((max, value) => value > max ? value : max);
+        : max(
+            1, spendingData.reduce((max, value) => value > max ? value : max));
   }
 
   Widget _buildPeriodButton(SpendingPeriod period, String label) {

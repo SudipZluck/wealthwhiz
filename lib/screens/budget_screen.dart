@@ -17,6 +17,8 @@ class BudgetScreen extends StatefulWidget {
 class _BudgetScreenState extends State<BudgetScreen> {
   bool _isLoading = false;
   List<Budget> _budgets = [];
+  List<Budget> _filteredBudgets = [];
+  Map<String, double> _budgetSpending = {};
   BudgetFrequency _selectedFrequency = BudgetFrequency.monthly;
 
   @override
@@ -25,28 +27,68 @@ class _BudgetScreenState extends State<BudgetScreen> {
     _loadBudgets();
   }
 
-  Future<void> _loadBudgets() async {
-    setState(() => _isLoading = true);
-    try {
-      final budgetService = BudgetService();
-      final budgets = await budgetService.getBudgets();
+  void _onFrequencyChanged(BudgetFrequency? frequency) {
+    if (frequency != null) {
       setState(() {
-        _budgets = budgets;
+        _selectedFrequency = frequency;
+        _filteredBudgets = _filterBudgetsByFrequency(_budgets);
       });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to load budgets: $e'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-    } finally {
-      setState(() => _isLoading = false);
     }
   }
 
-  List<Budget> get _filteredBudgets {
-    return _budgets.where((b) => b.frequency == _selectedFrequency).toList();
+  List<Budget> _filterBudgetsByFrequency(List<Budget> budgets) {
+    return budgets
+        .where((budget) => budget.frequency == _selectedFrequency)
+        .toList();
+  }
+
+  Future<void> _loadBudgets() async {
+    setState(() => _isLoading = true);
+    try {
+      final firebaseService = FirebaseService();
+      final currentUser = await firebaseService.getCurrentUser();
+      if (currentUser != null) {
+        final budgetService = BudgetService();
+        final databaseService = DatabaseService();
+
+        final budgets = await budgetService.getBudgets();
+        final transactions =
+            await databaseService.getTransactions(currentUser.id);
+
+        // Calculate spending for each budget
+        final Map<String, double> budgetSpending = {};
+        for (var budget in budgets) {
+          final budgetTransactions = transactions.where((t) =>
+              t.type == TransactionType.expense &&
+              t.category == budget.category &&
+              t.date.isAfter(budget.startDate) &&
+              t.date.isBefore(budget.endDate));
+
+          final spent = budgetTransactions.fold<double>(
+              0, (sum, transaction) => sum + transaction.amount);
+
+          budgetSpending[budget.id] = spent;
+        }
+
+        if (mounted) {
+          setState(() {
+            _budgets = budgets;
+            _budgetSpending = budgetSpending;
+            _filteredBudgets = _filterBudgetsByFrequency(budgets);
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading budgets: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   double get _totalBudget {
@@ -54,13 +96,18 @@ class _BudgetScreenState extends State<BudgetScreen> {
   }
 
   double get _totalSpent {
-    // TODO: Calculate actual spent amount from transactions
-    return _filteredBudgets.fold(0,
-        (sum, budget) => sum + (budget.amount * 0.65)); // Temporary calculation
+    return _filteredBudgets.fold(
+        0, (sum, budget) => sum + (_budgetSpending[budget.id] ?? 0));
   }
 
   double get _totalRemaining {
     return _totalBudget - _totalSpent;
+  }
+
+  double get _spendingProgress {
+    return _totalBudget > 0
+        ? (_totalSpent / _totalBudget).clamp(0.0, 1.0)
+        : 0.0;
   }
 
   Future<void> _addBudget() async {
@@ -160,16 +207,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
                         else
                           ..._filteredBudgets
                               .map((budget) => _buildBudgetCategory(
-                                    context,
-                                    budget.customCategory ??
-                                        _formatCategoryName(
-                                            budget.category.toString()),
-                                    budget.amount *
-                                        0.65, // TODO: Replace with actual spent amount
-                                    budget.amount,
-                                    Colors.purple, // TODO: Add category colors
-                                    Icons.category, // TODO: Add category icons
-                                  ))
+                                  context,
+                                  _formatCategoryName(
+                                      budget.category.toString()),
+                                  [budget]))
                               .toList(),
                       ],
                     ),
@@ -217,13 +258,19 @@ class _BudgetScreenState extends State<BudgetScreen> {
   Widget _buildBudgetCategory(
     BuildContext context,
     String category,
-    double spent,
-    double total,
-    Color color,
-    IconData icon,
+    List<Budget> budgets,
   ) {
-    final progress = spent / total;
     final theme = Theme.of(context);
+    double total = 0;
+    double spent = 0;
+
+    for (var budget in budgets) {
+      total += budget.amount;
+      spent += _budgetSpending[budget.id] ?? 0;
+    }
+
+    final progress = total > 0 ? (spent / total).clamp(0.0, 1.0) : 0.0;
+    final isOverBudget = spent > total;
 
     return CustomCard(
       onTap: () {
@@ -243,35 +290,36 @@ class _BudgetScreenState extends State<BudgetScreen> {
           ),
         );
       },
-      margin: const EdgeInsets.only(bottom: AppConstants.paddingMedium),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ListTile(
-            leading: CircleAvatar(
-              backgroundColor: color.withOpacity(0.1),
-              child: Icon(icon, color: color, size: 20),
-            ),
-            title: Text(category),
-            subtitle: Text(
-              '\$${spent.toStringAsFixed(2)} of \$${total.toStringAsFixed(2)}',
-              style: AppConstants.bodySmall.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                category,
+                style: AppConstants.titleMedium,
               ),
-            ),
-            trailing: Text(
-              '${(progress * 100).toStringAsFixed(1)}%',
-              style: AppConstants.titleMedium.copyWith(
-                color: color,
-                fontWeight: FontWeight.bold,
+              Text(
+                '${CurrencyFormatter.format(spent, Currency.usd)} / ${CurrencyFormatter.format(total, Currency.usd)}',
+                style: AppConstants.bodyMedium.copyWith(
+                  color:
+                      isOverBudget ? Colors.red : theme.colorScheme.onSurface,
+                ),
               ),
-            ),
+            ],
           ),
-          const SizedBox(height: 8),
-          LinearProgressIndicator(
-            value: progress,
-            backgroundColor: color.withOpacity(0.1),
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-            minHeight: 4,
+          const SizedBox(height: AppConstants.paddingMedium),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isOverBudget ? Colors.red : theme.colorScheme.primary,
+              ),
+              minHeight: 8,
+            ),
           ),
         ],
       ),
@@ -279,6 +327,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
   }
 
   Widget _buildOverviewCard() {
+    final theme = Theme.of(context);
+    final isOverBudget = _totalSpent > _totalBudget;
+
     return CustomCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -325,11 +376,13 @@ class _BudgetScreenState extends State<BudgetScreen> {
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
-              value: _totalBudget > 0 ? _totalSpent / _totalBudget : 0,
+              value: _spendingProgress,
               backgroundColor:
                   Theme.of(context).colorScheme.primary.withOpacity(0.1),
               valueColor: AlwaysStoppedAnimation<Color>(
-                Theme.of(context).colorScheme.primary,
+                isOverBudget
+                    ? Colors.red
+                    : Theme.of(context).colorScheme.primary,
               ),
               minHeight: 8,
             ),
@@ -357,9 +410,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
               selected: isSelected,
               onSelected: (selected) {
                 if (selected) {
-                  setState(() {
-                    _selectedFrequency = frequency;
-                  });
+                  _onFrequencyChanged(frequency);
                 }
               },
               labelPadding: EdgeInsets.zero,

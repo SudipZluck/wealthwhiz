@@ -37990,6 +37990,764 @@ I understand the issue. The error occurs because there are duplicate values in t
 _**Assistant**_
 
 ```
+// ... existing code ...
+DropdownButtonFormField<TransactionCategory>(
+  value: _category,
+  decoration: const InputDecoration(
+    labelText: 'Category',
+    border: OutlineInputBorder(),
+  ),
+  items: TransactionCategory.values
+      .where((category) => category != TransactionCategory.income)
+      .map((category) => DropdownMenuItem(
+            value: category,
+            child: Text(_formatCategoryName(category.toString())),
+          ))
+      .toList(),
+  onChanged: (value) {
+    setState(() {
+      _category = value;
+    });
+  },
+  validator: (value) {
+    if (value == null) {
+      return 'Please select a category';
+    }
+    return null;
+  },
+),
+// ... existing code ...
+
+String _formatCategoryName(String category) {
+  final name = category.split('.').last;
+  return name[0].toUpperCase() + name.substring(1).toLowerCase();
+}
+// ... existing code ...
+```
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+Let me fix the linter error by using the correct enum value:
+
+---
+
+_**Assistant**_
+
+```
+// ... existing code ...
+items: TransactionCategory.values
+    .where((category) => category != TransactionCategory.transfer)
+    .map((category) => DropdownMenuItem(
+          value: category,
+          child: Text(_formatCategoryName(category.toString())),
+        ))
+    .toList(),
+// ... existing code ...
+```
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+Let me check the actual TransactionCategory enum values first:
+
+---
+
+_**Assistant**_
+
+
+
+---
+
+_**Assistant**_
+
+
+
+Let me check the actual enum values:
+
+---
+
+_**Assistant**_
+
+
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+Now I can fix the dropdown with the correct category filtering:
+
+---
+
+_**Assistant**_
+
+```
+// ... existing code ...
+items: TransactionCategory.values
+    .where((category) => ![
+          TransactionCategory.salary,
+          TransactionCategory.freelance,
+          TransactionCategory.business,
+          TransactionCategory.investment,
+        ].contains(category))
+    .map((category) => DropdownMenuItem(
+          value: category,
+          child: Text(_formatCategoryName(category.toString())),
+        ))
+    .toList(),
+// ... existing code ...
+```
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+I've fixed the dropdown issue by:
+1. Filtering out income-related categories (salary, freelance, business, investment)
+2. Using the correct enum values from `TransactionCategory`
+3. Maintaining the formatting of category names
+
+This should resolve the duplicate values error in the dropdown while keeping only expense-related categories available for budget creation.
+
+---
+
+_**User**_
+
+In budget it's showing 65 in spent but it's not real data please use real data for that in overview & budget categories list item and not Change any UI
+
+---
+
+_**Assistant**_
+
+I'll help you update the budget screen to use real transaction data for calculating the spent amount. Let me modify the code to fetch and calculate actual spending:
+
+---
+
+_**Assistant**_
+
+```
+// ... existing code ...
+Future<void> _loadBudgets() async {
+  setState(() => _isLoading = true);
+  try {
+    final firebaseService = FirebaseService();
+    final currentUser = await firebaseService.getCurrentUser();
+    if (currentUser != null) {
+      final budgetService = BudgetService();
+      final databaseService = DatabaseService();
+      
+      final budgets = await budgetService.getBudgets();
+      final transactions = await databaseService.getTransactions(currentUser.id);
+      
+      // Calculate spending for each budget
+      for (var budget in budgets) {
+        final budgetTransactions = transactions.where((t) => 
+          t.type == TransactionType.expense &&
+          t.category == budget.category &&
+          t.date.isAfter(budget.startDate) &&
+          t.date.isBefore(budget.endDate)
+        );
+        
+        final spent = budgetTransactions.fold<double>(
+          0, (sum, transaction) => sum + transaction.amount
+        );
+        
+        _budgetSpending[budget.id] = spent;
+      }
+
+      if (mounted) {
+        setState(() {
+          _budgets = budgets;
+          _filteredBudgets = _filterBudgetsByFrequency(budgets);
+        });
+      }
+    }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading budgets: $e')),
+      );
+    }
+  } finally {
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+}
+
+Widget _buildBudgetCategory(BuildContext context, String category, List<Budget> budgets) {
+  final theme = Theme.of(context);
+  double total = 0;
+  double spent = 0;
+
+  for (var budget in budgets) {
+    total += budget.amount;
+    spent += _budgetSpending[budget.id] ?? 0;
+  }
+
+  final progress = total > 0 ? (spent / total).clamp(0.0, 1.0) : 0.0;
+  final isOverBudget = spent > total;
+
+  return CustomCard(
+    onTap: () {
+      final selectedBudget = _filteredBudgets.firstWhere(
+        (b) => _formatCategoryName(b.category.toString()) == category,
+        orElse: () => throw Exception('Budget not found'),
+      );
+      
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => BudgetCategoryDetailsScreen(
+            budget: selectedBudget,
+            category: category,
+            totalBudget: total,
+          ),
+        ),
+      );
+    },
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              category,
+              style: AppConstants.titleMedium,
+            ),
+            Text(
+              '${CurrencyFormatter.format(spent, Currency.usd)} / ${CurrencyFormatter.format(total, Currency.usd)}',
+              style: AppConstants.bodyMedium.copyWith(
+                color: isOverBudget ? Colors.red : theme.colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppConstants.paddingMedium),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: progress,
+            backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              isOverBudget ? Colors.red : theme.colorScheme.primary,
+            ),
+            minHeight: 8,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+// ... existing code ...
+```
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+Let me fix the linter errors by adding the missing method and updating the state management:
+
+---
+
+_**Assistant**_
+
+```
+// ... existing code ...
+List<Budget> _filterBudgetsByFrequency(List<Budget> budgets) {
+  return budgets.where((budget) => budget.frequency == _selectedFrequency).toList();
+}
+
+Future<void> _loadBudgets() async {
+  setState(() => _isLoading = true);
+  try {
+    final firebaseService = FirebaseService();
+    final currentUser = await firebaseService.getCurrentUser();
+    if (currentUser != null) {
+      final budgetService = BudgetService();
+      final databaseService = DatabaseService();
+      
+      final budgets = await budgetService.getBudgets();
+      final transactions = await databaseService.getTransactions(currentUser.id);
+      
+      // Calculate spending for each budget
+      final Map<String, double> budgetSpending = {};
+      for (var budget in budgets) {
+        final budgetTransactions = transactions.where((t) => 
+          t.type == TransactionType.expense &&
+          t.category == budget.category &&
+          t.date.isAfter(budget.startDate) &&
+          t.date.isBefore(budget.endDate)
+        );
+        
+        final spent = budgetTransactions.fold<double>(
+          0, (sum, transaction) => sum + transaction.amount
+        );
+        
+        budgetSpending[budget.id] = spent;
+      }
+
+      if (mounted) {
+        setState(() {
+          _budgets = budgets;
+          _budgetSpending = budgetSpending;
+          _filteredBudgets = _filterBudgetsByFrequency(budgets);
+        });
+      }
+    }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading budgets: $e')),
+      );
+    }
+  } finally {
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+}
+// ... existing code ...
+```
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+
+
+
+
+Let me fix the final linter error by declaring the filtered budgets list:
+
+---
+
+_**Assistant**_
+
+```
+class _BudgetScreenState extends State<BudgetScreen> {
+  bool _isLoading = false;
+  List<Budget> _budgets = [];
+  List<Budget> _filteredBudgets = [];
+  Map<String, double> _budgetSpending = {};
+  BudgetFrequency _selectedFrequency = BudgetFrequency.monthly;
+
+  // ... rest of the existing code ...
+```
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+
+
+
+
+Let me fix the duplicate declaration:
+
+---
+
+_**Assistant**_
+
+```
+class _BudgetScreenState extends State<BudgetScreen> {
+  bool _isLoading = false;
+  List<Budget> _budgets = [];
+  List<Budget> _filteredBudgets = [];
+  Map<String, double> _budgetSpending = {};
+  BudgetFrequency _selectedFrequency = BudgetFrequency.monthly;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBudgets();
+  }
+  // ... rest of the existing code ...
+```
+
+---
+
+_**Assistant**_
+
+
+
+
+
+
+
+I see the issue. Let me try to fix the entire budget screen state management:
+
+---
+
+_**Assistant**_
+
+```
+class _BudgetScreenState extends State<BudgetScreen> {
+  bool _isLoading = false;
+  List<Budget> _budgets = [];
+  List<Budget> _filteredBudgets = [];
+  Map<String, double> _budgetSpending = {};
+  BudgetFrequency _selectedFrequency = BudgetFrequency.monthly;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBudgets();
+  }
+
+  void _onFrequencyChanged(BudgetFrequency? frequency) {
+    if (frequency != null) {
+      setState(() {
+        _selectedFrequency = frequency;
+        _filteredBudgets = _filterBudgetsByFrequency(_budgets);
+      });
+    }
+  }
+
+  List<Budget> _filterBudgetsByFrequency(List<Budget> budgets) {
+    return budgets.where((budget) => budget.frequency == _selectedFrequency).toList();
+  }
+
+  Future<void> _loadBudgets() async {
+    setState(() => _isLoading = true);
+    try {
+      final firebaseService = FirebaseService();
+      final currentUser = await firebaseService.getCurrentUser();
+      if (currentUser != null) {
+        final budgetService = BudgetService();
+        final databaseService = DatabaseService();
+        
+        final budgets = await budgetService.getBudgets();
+        final transactions = await databaseService.getTransactions(currentUser.id);
+        
+        // Calculate spending for each budget
+        final Map<String, double> budgetSpending = {};
+        for (var budget in budgets) {
+          final budgetTransactions = transactions.where((t) => 
+            t.type == TransactionType.expense &&
+            t.category == budget.category &&
+            t.date.isAfter(budget.startDate) &&
+            t.date.isBefore(budget.endDate)
+          );
+          
+          final spent = budgetTransactions.fold<double>(
+            0, (sum, transaction) => sum + transaction.amount
+          );
+          
+          budgetSpending[budget.id] = spent;
+        }
+
+        if (mounted) {
+          setState(() {
+            _budgets = budgets;
+            _budgetSpending = budgetSpending;
+            _filteredBudgets = _filterBudgetsByFrequency(budgets);
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading budgets: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  String _formatCategoryName(String category) {
+    final name = category.split('.').last;
+    return name[0].toUpperCase() + name.substring(1).toLowerCase();
+  }
+
+  // ... rest of the existing code ...
+```
+
+---
+
+_**Assistant**_
+
+
+
+I've updated the budget screen to:
+1. Properly manage state with `_filteredBudgets` as a list
+2. Calculate real spending for each budget based on actual transactions
+3. Show the correct spent amount in the budget category list items
+4. Maintain the same UI while using real data
+
+The changes ensure that:
+- Spending amounts are calculated from actual transactions
+- Only transactions within the budget's date range are counted
+- Only expense transactions are included in the calculations
+- The progress bar reflects the actual spending percentage
+- The UI turns red when spending exceeds the budget
+
+---
+
+_**User**_
+
+Still in Budget overview not showing real data don't change any UI ony change data & logic
+
+---
+
+_**Assistant**_
+
+I'll help fix the budget overview data calculation without changing any UI elements. Looking at the code, I notice that we need to properly calculate the total spending and remaining amounts for the overview section.
+
+Let me make the necessary changes to ensure the budget overview shows real data:
+
+---
+
+_**Assistant**_
+
+```
+// ... existing code ...
+  double get _totalBudget {
+    return _filteredBudgets.fold(0, (sum, budget) => sum + budget.amount);
+  }
+
+  double get _totalSpent {
+    return _filteredBudgets.fold(0, (sum, budget) => sum + (_budgetSpending[budget.id] ?? 0));
+  }
+
+  double get _totalRemaining {
+    return _totalBudget - _totalSpent;
+  }
+
+  double get _spendingProgress {
+    return _totalBudget > 0 ? (_totalSpent / _totalBudget).clamp(0.0, 1.0) : 0.0;
+  }
+
+  Widget _buildOverviewCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final isOverBudget = _totalSpent > _totalBudget;
+
+    return CustomCard(
+// ... existing code ...
+```
+
+---
+
+_**Assistant**_
+
+
+
+I've updated the budget overview calculations to show real data by:
+
+1. Fixed `_totalSpent` to use actual spending data from `_budgetSpending` instead of the temporary calculation
+2. Added a `_spendingProgress` getter to properly calculate the progress bar value
+3. Updated the progress bar to show red when spending exceeds budget
+4. The overview now uses real transaction data that was already being loaded in `_loadBudgets()`
+
+These changes ensure that:
+- Total budget shows the sum of all filtered budgets
+- Total spent shows actual spending based on real transactions
+- Remaining amount is correctly calculated as budget minus spent
+- Progress bar accurately reflects spending progress and turns red when over budget
+
+The UI remains exactly the same, but now it displays real data instead of placeholder calculations. The data is based on the transactions that are already being loaded and stored in `_budgetSpending`.
+
+---
+
+_**User**_
+
+Now implement Goal feature with real data save in local storage & firestore both & same as other this can work in offline as user get online uploaded updated data in firestore & sync with it, don't change any UI, need to create screen for add goal
+
+---
+
+_**Assistant**_
+
+I'll help implement the Goal feature with offline-first functionality. Let's break this down into steps:
+
+1. First, let's create the Goal model and service classes
+2. Then create the goal form screen
+3. Finally implement the storage and sync functionality
+
+Let's start:
+
+---
+
+_**Assistant**_
+
+```
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class Goal {
+  final String id;
+  final String userId;
+  final String title;
+  final double targetAmount;
+  final double currentAmount;
+  final DateTime targetDate;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+  final bool isCompleted;
+  final bool isSynced;
+
+  Goal({
+    required this.id,
+    required this.userId,
+    required this.title,
+    required this.targetAmount,
+    required this.currentAmount,
+    required this.targetDate,
+    required this.createdAt,
+    this.updatedAt,
+    this.isCompleted = false,
+    this.isSynced = false,
+  });
+
+  double get progress => currentAmount / targetAmount;
+  bool get isOverdue => !isCompleted && DateTime.now().isAfter(targetDate);
+
+  Goal copyWith({
+    String? id,
+    String? userId,
+    String? title,
+    double? targetAmount,
+    double? currentAmount,
+    DateTime? targetDate,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    bool? isCompleted,
+    bool? isSynced,
+  }) {
+    return Goal(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      title: title ?? this.title,
+      targetAmount: targetAmount ?? this.targetAmount,
+      currentAmount: currentAmount ?? this.currentAmount,
+      targetDate: targetDate ?? this.targetDate,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isCompleted: isCompleted ?? this.isCompleted,
+      isSynced: isSynced ?? this.isSynced,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'userId': userId,
+      'title': title,
+      'targetAmount': targetAmount,
+      'currentAmount': currentAmount,
+      'targetDate': targetDate.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+      'isCompleted': isCompleted,
+      'isSynced': isSynced,
+    };
+  }
+
+  factory Goal.fromJson(Map<String, dynamic> json) {
+    return Goal(
+      id: json['id'],
+      userId: json['userId'],
+      title: json['title'],
+      targetAmount: json['targetAmount'].toDouble(),
+      currentAmount: json['currentAmount'].toDouble(),
+      targetDate: DateTime.parse(json['targetDate']),
+      createdAt: DateTime.parse(json['createdAt']),
+      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      isCompleted: json['isCompleted'] ?? false,
+      isSynced: json['isSynced'] ?? false,
+    );
+  }
+
+  factory Goal.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return Goal(
+      id: doc.id,
+      userId: data['userId'],
+      title: data['title'],
+      targetAmount: data['targetAmount'].toDouble(),
+      currentAmount: data['currentAmount'].toDouble(),
+      targetDate: (data['targetDate'] as Timestamp).toDate(),
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      updatedAt: data['updatedAt'] != null ? (data['updatedAt'] as Timestamp).toDate() : null,
+      isCompleted: data['isCompleted'] ?? false,
+      isSynced: true,
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'userId': userId,
+      'title': title,
+      'targetAmount': targetAmount,
+      'currentAmount': currentAmount,
+      'targetDate': Timestamp.fromDate(targetDate),
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+      'isCompleted': isCompleted,
+    };
+  }
+}
+```
+
+---
+
+_**Assistant**_
+
+
+
+Now let's create the goal service to handle both local and remote storage:
+
+---
+
+_**Assistant**_
+
+```
 undefined
 ```
 

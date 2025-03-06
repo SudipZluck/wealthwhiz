@@ -1,4 +1,5 @@
-export 'transaction.dart';
-export 'budget.dart';
-export 'savings_goal.dart';
+export 'goal.dart';
 export 'user.dart';
+export 'budget.dart';
+export 'transaction.dart';
+export 'savings_goal.dart';

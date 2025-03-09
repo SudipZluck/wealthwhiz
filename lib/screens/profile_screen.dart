@@ -14,6 +14,7 @@ import 'terms_of_service_screen.dart';
 import 'help_center_screen.dart';
 import 'contact_support_screen.dart';
 import 'about_screen.dart';
+import 'export_data_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -286,7 +287,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   'Export Data',
                   Icons.download_outlined,
                   onTap: () {
-                    // TODO: Handle data export
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ExportDataScreen(),
+                      ),
+                    );
                   },
                 ),
                 _buildSettingsTile(

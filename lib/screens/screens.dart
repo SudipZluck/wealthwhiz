@@ -13,3 +13,4 @@ export 'terms_of_service_screen.dart';
 export 'help_center_screen.dart';
 export 'contact_support_screen.dart';
 export 'about_screen.dart';
+export 'export_data_screen.dart';

@@ -46,7 +46,7 @@ dependencies:
   # Local Storage
   sqflite: ^2.3.0
   shared_preferences: ^2.3.3
-  path_provider: ^2.1.1
+  path_provider: ^2.1.5
 
   # UI Components
   fl_chart: 0.69.2
@@ -67,7 +67,10 @@ dependencies:
   url_launcher: ^6.2.2
   permission_handler: ^11.1.0
   csv: ^6.0.0
-  pdf: ^3.10.7
+  pdf: ^3.11.3
+  open_file: ^3.5.10
+  share_plus: ^10.1.4
+  printing: ^5.14.2
 
   # AI/ML (for experimental features)
   # Removed tflite_flutter - will use API later for AI-Powered Insights

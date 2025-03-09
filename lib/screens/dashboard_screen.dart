@@ -183,7 +183,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           .take(3) // Show only the 3 most recent transactions
                           .map((transaction) => _buildTransactionItem(
                                 context,
-                                transaction.description,
+                                transaction.category.toString(),
                                 transaction.type == TransactionType.income
                                     ? '+\$${transaction.amount.toStringAsFixed(2)}'
                                     : '\$${transaction.amount.toStringAsFixed(2)}',
@@ -285,7 +285,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         backgroundColor: color.withOpacity(0.1),
         child: Icon(icon, color: color, size: 20),
       ),
-      title: Text(title),
+      title: Text(_formatCategoryName(title)),
       subtitle: Text(date),
       trailing: Text(
         amount,
@@ -295,5 +295,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
     );
+  }
+
+  String _formatCategoryName(String category) {
+    // Split by dots and take the last part (in case of enum values)
+    final name = category.toString().split('.').last;
+    // Capitalize first letter and keep rest lowercase
+    return name[0].toUpperCase() + name.substring(1).toLowerCase();
   }
 }

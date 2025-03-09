@@ -3,6 +3,7 @@ import '../models/models.dart';
 import '../services/database_service.dart';
 import '../services/firebase_service.dart';
 import 'dart:io';
+import 'transaction_form_screen.dart';
 
 class AllTransactionsScreen extends StatefulWidget {
   @override
@@ -370,7 +371,12 @@ class _AllTransactionsScreenState extends State<AllTransactionsScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Add new transaction
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TransactionFormScreen(),
+            ),
+          ).then((_) => _loadTransactions());
         },
         child: Icon(Icons.add),
       ),

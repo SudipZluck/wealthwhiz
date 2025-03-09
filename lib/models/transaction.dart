@@ -47,6 +47,7 @@ class Transaction {
   final String? notes;
   final String? receiptPath;
   final SyncStatus syncStatus;
+  final String? goalId;
 
   Transaction({
     String? id,
@@ -65,6 +66,7 @@ class Transaction {
     this.notes,
     this.receiptPath,
     this.syncStatus = SyncStatus.pending,
+    this.goalId,
   })  : id = id ?? const Uuid().v4(),
         createdAt = createdAt ?? DateTime.now();
 
@@ -86,12 +88,14 @@ class Transaction {
       'notes': notes,
       'receiptPath': receiptPath,
       'syncStatus': syncStatus.name,
+      'goalId': goalId,
     };
   }
 
   Map<String, dynamic> toFirestore() {
     return {
       'id': id,
+      'userId': userId,
       'type': type.name,
       'category': category.name,
       'amount': amount,
@@ -99,6 +103,7 @@ class Transaction {
       'notes': notes,
       'receiptPath': receiptPath,
       'lastModified': FieldValue.serverTimestamp(),
+      'goalId': goalId,
     };
   }
 
@@ -139,6 +144,7 @@ class Transaction {
         (e) => e.name == (map['syncStatus'] ?? SyncStatus.pending.name),
         orElse: () => SyncStatus.pending,
       ),
+      goalId: map['goalId'] as String?,
     );
   }
 
@@ -166,6 +172,7 @@ class Transaction {
       notes: map['notes'] as String?,
       receiptPath: map['receiptPath'] as String?,
       syncStatus: SyncStatus.synced,
+      goalId: map['goalId'] as String?,
     );
   }
 
@@ -186,6 +193,7 @@ class Transaction {
     String? notes,
     String? receiptPath,
     SyncStatus? syncStatus,
+    String? goalId,
   }) {
     return Transaction(
       id: id ?? this.id,
@@ -204,6 +212,7 @@ class Transaction {
       notes: notes ?? this.notes,
       receiptPath: receiptPath ?? this.receiptPath,
       syncStatus: syncStatus ?? this.syncStatus,
+      goalId: goalId ?? this.goalId,
     );
   }
 }

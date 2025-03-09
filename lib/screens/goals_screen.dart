@@ -1,9 +1,45 @@
 import 'package:flutter/material.dart';
 import '../constants/constants.dart';
 import '../widgets/widgets.dart';
+import '../models/goal.dart';
+import '../services/services.dart';
+import 'add_goal_screen.dart';
 
-class GoalsScreen extends StatelessWidget {
+class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
+
+  @override
+  State<GoalsScreen> createState() => _GoalsScreenState();
+}
+
+class _GoalsScreenState extends State<GoalsScreen> {
+  final GoalService _goalService = GoalService();
+  List<Goal> _goals = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadGoals();
+  }
+
+  Future<void> _loadGoals() async {
+    try {
+      final goals = await _goalService.getGoals();
+      if (mounted) {
+        setState(() {
+          _goals = goals;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading goals: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,131 +58,155 @@ class GoalsScreen extends StatelessWidget {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async {
-          // TODO: Implement refresh
-        },
-        child: ListView(
-          padding: const EdgeInsets.all(AppConstants.paddingMedium),
-          children: [
-            // Total Savings Overview
-            CustomCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        onRefresh: _loadGoals,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView(
+                padding: const EdgeInsets.all(AppConstants.paddingMedium),
                 children: [
-                  const CustomCardHeader(
-                    title: 'Total Savings',
-                    subtitle: 'Across all goals',
-                  ),
-                  const SizedBox(height: AppConstants.paddingMedium),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildSavingsStat(
-                          context,
-                          'Current',
-                          '\$15,750.00',
-                          Icons.savings,
-                          theme.colorScheme.primary,
+                  // Total Savings Overview
+                  CustomCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const CustomCardHeader(
+                          title: 'Total Savings',
+                          subtitle: 'Across all goals',
                         ),
-                      ),
-                      const SizedBox(width: AppConstants.paddingMedium),
-                      Expanded(
-                        child: _buildSavingsStat(
-                          context,
-                          'Target',
-                          '\$50,000.00',
-                          Icons.flag,
-                          Colors.green,
+                        const SizedBox(height: AppConstants.paddingMedium),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildSavingsStat(
+                                context,
+                                'Current',
+                                '\$${_calculateTotalCurrentAmount().toStringAsFixed(2)}',
+                                Icons.savings,
+                                theme.colorScheme.primary,
+                              ),
+                            ),
+                            const SizedBox(width: AppConstants.paddingMedium),
+                            Expanded(
+                              child: _buildSavingsStat(
+                                context,
+                                'Target',
+                                '\$${_calculateTotalTargetAmount().toStringAsFixed(2)}',
+                                Icons.flag,
+                                Colors.green,
+                              ),
+                            ),
+                          ],
                         ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.paddingMedium),
+
+                  // Active Goals
+                  if (_activeGoals.isNotEmpty)
+                    CustomCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const CustomCardHeader(
+                            title: 'Active Goals',
+                          ),
+                          const SizedBox(height: AppConstants.paddingMedium),
+                          ..._activeGoals.map((goal) => _buildGoalItem(
+                                context,
+                                goal.name,
+                                goal.targetAmount,
+                                goal.currentAmount,
+                                goal.targetDate,
+                                _getIconForGoal(goal.name),
+                                _getColorForGoal(goal.name),
+                              )),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppConstants.paddingMedium),
-
-            // Active Goals
-            CustomCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const CustomCardHeader(
-                    title: 'Active Goals',
-                  ),
+                    ),
                   const SizedBox(height: AppConstants.paddingMedium),
-                  _buildGoalItem(
-                    context,
-                    'New Car',
-                    25000.0,
-                    15000.0,
-                    DateTime(2024, 12, 31),
-                    Icons.directions_car,
-                    Colors.blue,
-                  ),
-                  _buildGoalItem(
-                    context,
-                    'Emergency Fund',
-                    10000.0,
-                    7500.0,
-                    DateTime(2024, 6, 30),
-                    Icons.health_and_safety,
-                    Colors.orange,
-                  ),
-                  _buildGoalItem(
-                    context,
-                    'Vacation',
-                    5000.0,
-                    2500.0,
-                    DateTime(2024, 8, 15),
-                    Icons.beach_access,
-                    Colors.purple,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppConstants.paddingMedium),
 
-            // Completed Goals
-            CustomCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const CustomCardHeader(
-                    title: 'Completed Goals',
-                  ),
-                  const SizedBox(height: AppConstants.paddingMedium),
-                  _buildCompletedGoalItem(
-                    context,
-                    'New Phone',
-                    1200.0,
-                    Icons.phone_iphone,
-                    Colors.green,
-                    DateTime(2024, 1, 15),
-                  ),
-                  _buildCompletedGoalItem(
-                    context,
-                    'Home Deposit',
-                    20000.0,
-                    Icons.home,
-                    Colors.brown,
-                    DateTime(2023, 12, 1),
-                  ),
+                  // Completed Goals
+                  if (_completedGoals.isNotEmpty)
+                    CustomCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const CustomCardHeader(
+                            title: 'Completed Goals',
+                          ),
+                          const SizedBox(height: AppConstants.paddingMedium),
+                          ..._completedGoals
+                              .map((goal) => _buildCompletedGoalItem(
+                                    context,
+                                    goal.name,
+                                    goal.targetAmount,
+                                    _getIconForGoal(goal.name),
+                                    _getColorForGoal(goal.name),
+                                    goal.updatedAt ?? goal.createdAt,
+                                  )),
+                        ],
+                      ),
+                    ),
                 ],
               ),
-            ),
-          ],
-        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'goals_fab',
-        onPressed: () {
-          // TODO: Add new goal
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddGoalScreen()),
+          );
+          _loadGoals();
         },
         icon: const Icon(Icons.add),
         label: const Text('Add Goal'),
       ),
     );
+  }
+
+  List<Goal> get _activeGoals =>
+      _goals.where((goal) => !goal.isCompleted).toList();
+  List<Goal> get _completedGoals =>
+      _goals.where((goal) => goal.isCompleted).toList();
+
+  double _calculateTotalCurrentAmount() {
+    return _goals.fold(0.0, (sum, goal) => sum + goal.currentAmount);
+  }
+
+  double _calculateTotalTargetAmount() {
+    return _goals.fold(0.0, (sum, goal) => sum + goal.targetAmount);
+  }
+
+  IconData _getIconForGoal(String goalName) {
+    final name = goalName.toLowerCase();
+    if (name.contains('car')) return Icons.directions_car;
+    if (name.contains('house') || name.contains('home')) return Icons.home;
+    if (name.contains('vacation') || name.contains('travel'))
+      return Icons.beach_access;
+    if (name.contains('education') || name.contains('school'))
+      return Icons.school;
+    if (name.contains('emergency')) return Icons.health_and_safety;
+    if (name.contains('phone')) return Icons.phone_iphone;
+    if (name.contains('laptop') || name.contains('computer'))
+      return Icons.laptop;
+    return Icons.star;
+  }
+
+  Color _getColorForGoal(String goalName) {
+    final name = goalName.toLowerCase();
+    if (name.contains('car')) return Colors.blue;
+    if (name.contains('house') || name.contains('home')) return Colors.brown;
+    if (name.contains('vacation') || name.contains('travel'))
+      return Colors.purple;
+    if (name.contains('education') || name.contains('school'))
+      return Colors.orange;
+    if (name.contains('emergency')) return Colors.red;
+    if (name.contains('phone')) return Colors.green;
+    if (name.contains('laptop') || name.contains('computer'))
+      return Colors.indigo;
+    return Colors.teal;
   }
 
   Widget _buildSavingsStat(

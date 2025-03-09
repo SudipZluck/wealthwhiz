@@ -136,33 +136,60 @@ class _SpendingChartsState extends State<SpendingCharts> {
                     PieChartData(
                       sections: _buildPieChartSections(context),
                       sectionsSpace: 2,
-                      centerSpaceRadius: 30,
+                      centerSpaceRadius: 50,
                       startDegreeOffset: -90,
+                      borderData: FlBorderData(show: false),
                     ),
                   ),
                 ),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Total',
-                        style: AppConstants.bodySmall.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.7),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Theme.of(context).shadowColor.withOpacity(0.1),
+                          blurRadius: 4,
+                          spreadRadius: 1,
                         ),
-                      ),
-                      Text(
-                        CurrencyFormatter.format(
-                            _getPeriodTotal(), widget.currency),
-                        style: AppConstants.titleMedium.copyWith(
-                          fontWeight: FontWeight.bold,
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _getPeriodLabel(),
+                          style: AppConstants.bodySmall.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 10,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 2),
+                        Text(
+                          CurrencyFormatter.format(
+                              _getPeriodTotal(), widget.currency),
+                          style: AppConstants.titleMedium.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          'Total Spent',
+                          style: AppConstants.bodySmall.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.7),
+                            fontSize: 9,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -180,16 +207,32 @@ class _SpendingChartsState extends State<SpendingCharts> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      _getChartTitle(),
-                      style: AppConstants.titleMedium.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _getChartTitle(),
+                          style: AppConstants.titleMedium.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tap bars for details',
+                          style: AppConstants.bodySmall.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.6),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                        horizontal: 10,
+                        vertical: 6,
                       ),
                       decoration: BoxDecoration(
                         color: Theme.of(context)
@@ -428,26 +471,59 @@ class _SpendingChartsState extends State<SpendingCharts> {
     final periodSpending = _getPeriodSpending();
     final total = _getPeriodTotal();
 
-    periodSpending.forEach((category, amount) {
+    // Sort categories by amount (descending)
+    final sortedEntries = periodSpending.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    for (var i = 0; i < sortedEntries.length; i++) {
+      final entry = sortedEntries[i];
+      final category = entry.key;
+      final amount = entry.value;
+
       final double percentage = total > 0 ? (amount / total) * 100 : 0;
       final bool isLargeSection = percentage > 10;
+
+      // Calculate a slightly larger radius for the largest sections
+      final double radius = isLargeSection ? 55 : 50;
+
       sections.add(
         PieChartSectionData(
           color: _getCategoryColor(category, theme),
           value: percentage,
-          title: isLargeSection ? '${percentage.toStringAsFixed(0)}%' : '',
-          radius: 60,
+          title: isLargeSection ? '${percentage.toStringAsFixed(1)}%' : '',
+          radius: radius,
           titleStyle: AppConstants.bodySmall.copyWith(
             color: theme.colorScheme.onPrimary,
             fontWeight: FontWeight.bold,
-            fontSize: 10,
+            fontSize: 11,
           ),
           showTitle: isLargeSection,
+          badgeWidget: isLargeSection
+              ? null
+              : percentage > 5
+                  ? _buildSmallBadge(context, category)
+                  : null,
+          badgePositionPercentageOffset: 0.8,
         ),
       );
-    });
+    }
 
     return sections;
+  }
+
+  Widget? _buildSmallBadge(BuildContext context, TransactionCategory category) {
+    return Container(
+      width: 6,
+      height: 6,
+      decoration: BoxDecoration(
+        color: _getCategoryColor(category, Theme.of(context)),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Theme.of(context).colorScheme.background,
+          width: 0.5,
+        ),
+      ),
+    );
   }
 
   Widget _buildLegend(BuildContext context) {
@@ -455,41 +531,76 @@ class _SpendingChartsState extends State<SpendingCharts> {
     final periodSpending = _getPeriodSpending();
     final total = _getPeriodTotal();
 
-    return Wrap(
-      spacing: AppConstants.paddingSmall,
-      runSpacing: AppConstants.paddingSmall,
-      children: periodSpending.keys.map((category) {
-        final amount = periodSpending[category] ?? 0;
-        final percentage =
-            total > 0 ? (amount / total * 100).toStringAsFixed(0) : '0';
-        return Container(
-          padding: const EdgeInsets.symmetric(
-            vertical: 4,
-            horizontal: 8,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: _getCategoryColor(category, theme),
-                  shape: BoxShape.circle,
-                ),
+    // Sort categories by amount (descending)
+    final sortedCategories = periodSpending.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.paddingMedium,
+        vertical: AppConstants.paddingSmall,
+      ),
+      child: Wrap(
+        spacing: AppConstants.paddingMedium,
+        runSpacing: AppConstants.paddingSmall,
+        alignment: WrapAlignment.center,
+        children: sortedCategories.map((entry) {
+          final category = entry.key;
+          final amount = entry.value;
+          final percentage =
+              total > 0 ? (amount / total * 100).toStringAsFixed(1) : '0.0';
+
+          return Container(
+            padding: const EdgeInsets.symmetric(
+              vertical: 6,
+              horizontal: 10,
+            ),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: theme.dividerColor,
+                width: 0.5,
               ),
-              const SizedBox(width: 4),
-              Text(
-                '${category.name} ($percentage%)',
-                style: AppConstants.bodySmall.copyWith(
-                  fontSize: 10,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: _getCategoryColor(category, theme),
+                    shape: BoxShape.circle,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
+                const SizedBox(width: 6),
+                Text(
+                  _formatCategoryName(category.toString()),
+                  style: AppConstants.bodySmall.copyWith(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '$percentage%',
+                  style: AppConstants.bodySmall.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
     );
+  }
+
+  String _formatCategoryName(String category) {
+    final name = category.split('.').last;
+    return name[0].toUpperCase() + name.substring(1).toLowerCase();
   }
 
   Color _getCategoryColor(TransactionCategory category, ThemeData theme) {

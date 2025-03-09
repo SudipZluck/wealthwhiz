@@ -3894,8 +3894,1396 @@ Now, let's create a utility class for generating PDF reports:
 _**Assistant**_
 
 ```
-undefined
+import 'dart:io';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import '../constants/constants.dart';
+import '../models/models.dart';
+import '../utils/currency_formatter.dart';
+
+class PdfExportUtil {
+  static Future<void> exportTransactionsToPdf(
+    List<Transaction> transactions,
+    User user,
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    final pdf = pw.Document();
+    final font = await PdfGoogleFonts.robotoRegular();
+    final boldFont = await PdfGoogleFonts.robotoBold();
+    
+    // Group transactions by type
+    final incomeTransactions = transactions
+        .where((t) => t.type == TransactionType.income)
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+    
+    final expenseTransactions = transactions
+        .where((t) => t.type == TransactionType.expense)
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+    
+    // Calculate totals
+    final totalIncome = incomeTransactions.fold<double>(
+        0, (sum, transaction) => sum + transaction.amount);
+    
+    final totalExpenses = expenseTransactions.fold<double>(
+        0, (sum, transaction) => sum + transaction.amount);
+    
+    final balance = totalIncome - totalExpenses;
+    
+    // Group expenses by category
+    final Map<TransactionCategory, double> expensesByCategory = {};
+    for (var transaction in expenseTransactions) {
+      expensesByCategory[transaction.category] = 
+          (expensesByCategory[transaction.category] ?? 0) + transaction.amount;
+    }
+    
+    // Sort categories by amount (descending)
+    final sortedCategories = expensesByCategory.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    
+    // Create PDF content
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        header: (context) => _buildHeader(
+          context,
+          font,
+          boldFont,
+          startDate,
+          endDate,
+          user.preferredCurrency,
+        ),
+        footer: (context) => _buildFooter(context, font),
+        build: (context) => [
+          // Summary section
+          _buildSummarySection(
+            boldFont,
+            font,
+            totalIncome,
+            totalExpenses,
+            balance,
+            user.preferredCurrency,
+          ),
+          pw.SizedBox(height: 20),
+          
+          // Expenses by category
+          _buildCategoryBreakdown(
+            boldFont,
+            font,
+            sortedCategories,
+            totalExpenses,
+            user.preferredCurrency,
+          ),
+          pw.SizedBox(height: 20),
+          
+          // Income transactions
+          _buildTransactionList(
+            boldFont,
+            font,
+            'Income Transactions',
+            incomeTransactions,
+            user.preferredCurrency,
+          ),
+          pw.SizedBox(height: 20),
+          
+          // Expense transactions
+          _buildTransactionList(
+            boldFont,
+            font,
+            'Expense Transactions',
+            expenseTransactions,
+            user.preferredCurrency,
+          ),
+        ],
+      ),
+    );
+    
+    // Save and open the PDF
+    await _savePdfAndOpen(pdf);
+  }
+  
+  static pw.Widget _buildHeader(
+    pw.Context context,
+    pw.Font font,
+    pw.Font boldFont,
+    DateTime startDate,
+    DateTime endDate,
+    Currency currency,
+  ) {
+    final dateFormat = DateFormat('MMM d, yyyy');
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text(
+              'WealthWhiz Financial Report',
+              style: pw.TextStyle(
+                font: boldFont,
+                fontSize: 20,
+                color: PdfColors.blue900,
+              ),
+            ),
+            pw.Text(
+              'Generated: ${dateFormat.format(DateTime.now())}',
+              style: pw.TextStyle(
+                font: font,
+                fontSize: 12,
+                color: PdfColors.grey700,
+              ),
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 5),
+        pw.Text(
+          'Period: ${dateFormat.format(startDate)} - ${dateFormat.format(endDate)}',
+          style: pw.TextStyle(
+            font: font,
+            fontSize: 12,
+            color: PdfColors.grey700,
+          ),
+        ),
+        pw.SizedBox(height: 5),
+        pw.Divider(color: PdfColors.grey400),
+      ],
+    );
+  }
+  
+  static pw.Widget _buildFooter(pw.Context context, pw.Font font) {
+    return pw.Column(
+      children: [
+        pw.Divider(color: PdfColors.grey400),
+        pw.SizedBox(height: 5),
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text(
+              'WealthWhiz - Your Financial Partner',
+              style: pw.TextStyle(
+                font: font,
+                fontSize: 10,
+                color: PdfColors.grey600,
+              ),
+            ),
+            pw.Text(
+              'Page ${context.pageNumber} of ${context.pagesCount}',
+              style: pw.TextStyle(
+                font: font,
+                fontSize: 10,
+                color: PdfColors.grey600,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+  
+  static pw.Widget _buildSummarySection(
+    pw.Font boldFont,
+    pw.Font regularFont,
+    double totalIncome,
+    double totalExpenses,
+    double balance,
+    Currency currency,
+  ) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(10),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.grey100,
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'Financial Summary',
+            style: pw.TextStyle(
+              font: boldFont,
+              fontSize: 16,
+              color: PdfColors.blue900,
+            ),
+          ),
+          pw.SizedBox(height: 10),
+          pw.Row(
+            children: [
+              _buildSummaryItem(
+                boldFont,
+                regularFont,
+                'Total Income',
+                totalIncome,
+                PdfColors.green700,
+                currency,
+              ),
+              _buildSummaryItem(
+                boldFont,
+                regularFont,
+                'Total Expenses',
+                totalExpenses,
+                PdfColors.red700,
+                currency,
+              ),
+              _buildSummaryItem(
+                boldFont,
+                regularFont,
+                'Balance',
+                balance,
+                balance >= 0 ? PdfColors.blue700 : PdfColors.red700,
+                currency,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+  
+  static pw.Expanded _buildSummaryItem(
+    pw.Font boldFont,
+    pw.Font regularFont,
+    String title,
+    double amount,
+    PdfColor color,
+    Currency currency,
+  ) {
+    final formattedAmount = CurrencyFormatter.format(amount, currency);
+    
+    return pw.Expanded(
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          pw.Text(
+            title,
+            style: pw.TextStyle(
+              font: regularFont,
+              fontSize: 12,
+              color: PdfColors.grey800,
+            ),
+          ),
+          pw.SizedBox(height: 5),
+          pw.Text(
+            formattedAmount,
+            style: pw.TextStyle(
+              font: boldFont,
+              fontSize: 14,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  static pw.Widget _buildCategoryBreakdown(
+    pw.Font boldFont,
+    pw.Font regularFont,
+    List<MapEntry<TransactionCategory, double>> categories,
+    double totalExpenses,
+    Currency currency,
+  ) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'Expense Breakdown by Category',
+          style: pw.TextStyle(
+            font: boldFont,
+            fontSize: 16,
+            color: PdfColors.blue900,
+          ),
+        ),
+        pw.SizedBox(height: 10),
+        pw.Table(
+          border: pw.TableBorder.all(color: PdfColors.grey300),
+          columnWidths: {
+            0: const pw.FlexColumnWidth(3),
+            1: const pw.FlexColumnWidth(2),
+            2: const pw.FlexColumnWidth(2),
+          },
+          children: [
+            pw.TableRow(
+              decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+              children: [
+                _buildTableCell('Category', boldFont, isHeader: true),
+                _buildTableCell('Amount', boldFont, isHeader: true),
+                _buildTableCell('Percentage', boldFont, isHeader: true),
+              ],
+            ),
+            ...categories.map((entry) {
+              final percentage = totalExpenses > 0
+                  ? (entry.value / totalExpenses * 100)
+                  : 0.0;
+              return pw.TableRow(
+                children: [
+                  _buildTableCell(
+                    _formatCategoryName(entry.key.toString()),
+                    regularFont,
+                  ),
+                  _buildTableCell(
+                    CurrencyFormatter.format(entry.value, currency),
+                    regularFont,
+                  ),
+                  _buildTableCell(
+                    '${percentage.toStringAsFixed(1)}%',
+                    regularFont,
+                  ),
+                ],
+              );
+            }).toList(),
+          ],
+        ),
+      ],
+    );
+  }
+  
+  static pw.Widget _buildTransactionList(
+    pw.Font boldFont,
+    pw.Font regularFont,
+    String title,
+    List<Transaction> transactions,
+    Currency currency,
+  ) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          title,
+          style: pw.TextStyle(
+            font: boldFont,
+            fontSize: 16,
+            color: PdfColors.blue900,
+          ),
+        ),
+        pw.SizedBox(height: 10),
+        transactions.isEmpty
+            ? pw.Text(
+                'No transactions in this period',
+                style: pw.TextStyle(
+                  font: regularFont,
+                  fontSize: 12,
+                  color: PdfColors.grey600,
+                ),
+              )
+            : pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey300),
+                columnWidths: {
+                  0: const pw.FlexColumnWidth(2),
+                  1: const pw.FlexColumnWidth(3),
+                  2: const pw.FlexColumnWidth(2),
+                  3: const pw.FlexColumnWidth(2),
+                },
+                children: [
+                  pw.TableRow(
+                    decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                    children: [
+                      _buildTableCell('Date', boldFont, isHeader: true),
+                      _buildTableCell('Description', boldFont, isHeader: true),
+                      _buildTableCell('Category', boldFont, isHeader: true),
+                      _buildTableCell('Amount', boldFont, isHeader: true),
+                    ],
+                  ),
+                  ...transactions.map((transaction) {
+                    final dateFormat = DateFormat('MM/dd/yyyy');
+                    return pw.TableRow(
+                      children: [
+                        _buildTableCell(
+                          dateFormat.format(transaction.date),
+                          regularFont,
+                        ),
+                        _buildTableCell(
+                          transaction.description,
+                          regularFont,
+                        ),
+                        _buildTableCell(
+                          _formatCategoryName(transaction.category.toString()),
+                          regularFont,
+                        ),
+                        _buildTableCell(
+                          CurrencyFormatter.format(transaction.amount, currency),
+                          regularFont,
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ],
+              ),
+      ],
+    );
+  }
+  
+  static pw.Widget _buildTableCell(
+    String text,
+    pw.Font font, {
+    bool isHeader = false,
+  }) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(8),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          font: font,
+          fontSize: 10,
+          fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
+        ),
+      ),
+    );
+  }
+  
+  static String _formatCategoryName(String category) {
+    final name = category.split('.').last;
+    return name[0].toUpperCase() + name.substring(1).toLowerCase();
+  }
+  
+  static Future<void> _savePdfAndOpen(pw.Document pdf) async {
+    try {
+      // Generate a unique filename with timestamp
+      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      final filename = 'wealthwhiz_report_$timestamp.pdf';
+      
+      // Get the temporary directory
+      final output = await getTemporaryDirectory();
+      final file = File('${output.path}/$filename');
+      
+      // Save the PDF
+      await file.writeAsBytes(await pdf.save());
+      
+      // Open the PDF for viewing/printing/sharing
+      await Printing.sharePdf(
+        bytes: await pdf.save(),
+        filename: filename,
+      );
+    } catch (e) {
+      print('Error saving or opening PDF: $e');
+      rethrow;
+    }
+  }
+}
 ```
+
+---
+
+_**Assistant**_
+
+Now, let's create a screen to allow users to select the date range for the export:
+
+---
+
+_**Assistant**_
+
+```
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../constants/constants.dart';
+import '../models/models.dart';
+import '../services/services.dart';
+import '../utils/pdf_export_util.dart';
+import '../widgets/widgets.dart';
+
+class ExportDataScreen extends StatefulWidget {
+  const ExportDataScreen({super.key});
+
+  @override
+  State<ExportDataScreen> createState() => _ExportDataScreenState();
+}
+
+class _ExportDataScreenState extends State<ExportDataScreen> {
+  DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
+  DateTime _endDate = DateTime.now();
+  bool _isLoading = false;
+  User? _currentUser;
+  List<Transaction> _transactions = [];
+  final DateFormat _dateFormat = DateFormat('MMM d, yyyy');
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserAndTransactions();
+  }
+
+  Future<void> _loadUserAndTransactions() async {
+    setState(() => _isLoading = true);
+    try {
+      // Load user data
+      final firebaseService = FirebaseService();
+      final currentUser = await firebaseService.getCurrentUser();
+      if (currentUser == null) {
+        throw Exception('No user is currently logged in');
+      }
+
+      setState(() {
+        _currentUser = currentUser;
+      });
+
+      // Load transactions
+      await _loadTransactions();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading data: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _loadTransactions() async {
+    try {
+      if (_currentUser == null) return;
+
+      final databaseService = DatabaseService();
+      final transactions = await databaseService.getTransactions(_currentUser!.id);
+      
+      if (mounted) {
+        setState(() {
+          _transactions = transactions;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading transactions: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _selectStartDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _startDate,
+      firstDate: DateTime(2020),
+      lastDate: _endDate,
+    );
+    if (picked != null && picked != _startDate) {
+      setState(() {
+        _startDate = picked;
+      });
+    }
+  }
+
+  Future<void> _selectEndDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _endDate,
+      firstDate: _startDate,
+      lastDate: DateTime.now(),
+    );
+    if (picked != null && picked != _endDate) {
+      setState(() {
+        _endDate = picked;
+      });
+    }
+  }
+
+  Future<void> _exportData() async {
+    if (_currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User data not available')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Filter transactions by date range
+      final filteredTransactions = _transactions.where((transaction) {
+        return transaction.date.isAfter(_startDate.subtract(const Duration(days: 1))) && 
+               transaction.date.isBefore(_endDate.add(const Duration(days: 1)));
+      }).toList();
+
+      // Generate and open PDF
+      await PdfExportUtil.exportTransactionsToPdf(
+        filteredTransactions,
+        _currentUser!,
+        _startDate,
+        _endDate,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Financial report generated successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error exporting data: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      appBar: const CustomAppBar(
+        title: 'Export Data',
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(AppConstants.paddingMedium),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Export Financial Data',
+                    style: AppConstants.headlineMedium,
+                  ),
+                  const SizedBox(height: AppConstants.paddingMedium),
+                  Text(
+                    'Generate a PDF report of your income and expenses for a selected time period.',
+                    style: AppConstants.bodyMedium.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.paddingLarge),
+                  
+                  // Date Range Selection
+                  CustomCard(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppConstants.paddingMedium),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const CustomCardHeader(
+                            title: 'Select Date Range',
+                            subtitle: 'Choose the period for your financial report',
+                          ),
+                          const SizedBox(height: AppConstants.paddingMedium),
+                          
+                          // Start Date
+                          ListTile(
+                            title: const Text('Start Date'),
+                            subtitle: Text(_dateFormat.format(_startDate)),
+                            trailing: const Icon(Icons.calendar_today),
+                            onTap: _selectStartDate,
+                          ),
+                          
+                          // End Date
+                          ListTile(
+                            title: const Text('End Date'),
+                            subtitle: Text(_dateFormat.format(_endDate)),
+                            trailing: const Icon(Icons.calendar_today),
+                            onTap: _selectEndDate,
+                          ),
+                          
+                          const SizedBox(height: AppConstants.paddingMedium),
+                          
+                          // Transaction Count
+                          Center(
+                            child: Text(
+                              'Transactions in selected period: ${_getTransactionCount()}',
+                              style: AppConstants.bodyMedium.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.paddingLarge),
+                  
+                  // Report Options
+                  CustomCard(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppConstants.paddingMedium),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const CustomCardHeader(
+                            title: 'Report Contents',
+                          ),
+                          const SizedBox(height: AppConstants.paddingMedium),
+                          
+                          _buildReportFeature(
+                            'Financial Summary',
+                            'Total income, expenses, and balance',
+                            Icons.summarize,
+                          ),
+                          _buildReportFeature(
+                            'Category Breakdown',
+                            'Expenses grouped by category',
+                            Icons.pie_chart,
+                          ),
+                          _buildReportFeature(
+                            'Transaction List',
+                            'Detailed list of all transactions',
+                            Icons.receipt_long,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.paddingLarge),
+                  
+                  // Export Button
+                  Center(
+                    child: CustomButton(
+                      text: 'Generate PDF Report',
+                      onPressed: _exportData,
+                      icon: Icons.picture_as_pdf,
+                      isLoading: _isLoading,
+                      isFullWidth: true,
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.paddingMedium),
+                  
+                  // Note
+                  Center(
+                    child: Text(
+                      'The report will open automatically when generated',
+                      style: AppConstants.bodySmall.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  int _getTransactionCount() {
+    return _transactions.where((transaction) {
+      return transaction.date.isAfter(_startDate.subtract(const Duration(days: 1))) && 
+             transaction.date.isBefore(_endDate.add(const Duration(days: 1)));
+    }).length;
+  }
+
+  Widget _buildReportFeature(String title, String description, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppConstants.paddingMedium),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              color: Theme.of(context).colorScheme.primary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: AppConstants.paddingMedium),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppConstants.titleMedium,
+                ),
+                Text(
+                  description,
+                  style: AppConstants.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.check_circle, color: Colors.green),
+        ],
+      ),
+    );
+  }
+}
+```
+
+---
+
+_**Assistant**_
+
+Now, let's update the profile screen to navigate to the export data screen when the user taps on "Export Data":
+
+---
+
+_**Assistant**_
+
+```
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../constants/constants.dart';
+import '../models/user.dart';
+import '../widgets/widgets.dart';
+import '../services/firebase_service.dart';
+import '../widgets/theme_picker_dialog.dart';
+import '../widgets/currency_picker_dialog.dart';
+import '../providers/theme_provider.dart';
+import '../utils/currency_formatter.dart';
+import 'edit_profile_screen.dart';
+import 'privacy_policy_screen.dart';
+import 'terms_of_service_screen.dart';
+import 'help_center_screen.dart';
+import 'contact_support_screen.dart';
+import 'about_screen.dart';
+import 'export_data_screen.dart';
+
+// ... existing code ...
+
+                _buildSettingsTile(
+                  context,
+                  'Export Data',
+                  Icons.download_outlined,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ExportDataScreen(),
+                      ),
+                    );
+                  },
+                ),
+```
+
+---
+
+_**Assistant**_
+
+Finally, let's update the screens.dart file to include the export data screen:
+
+---
+
+_**Assistant**_
+
+```
+export 'splash_screen.dart';
+export 'auth_screen.dart';
+export 'home_screen.dart';
+export 'dashboard_screen.dart';
+export 'transactions_screen.dart';
+export 'budget_screen.dart';
+export 'goals_screen.dart';
+export 'profile_screen.dart';
+export 'transaction_form_screen.dart';
+export 'add_goal_screen.dart';
+export 'privacy_policy_screen.dart';
+export 'terms_of_service_screen.dart';
+export 'help_center_screen.dart';
+export 'contact_support_screen.dart';
+export 'about_screen.dart';
+export 'export_data_screen.dart';
+```
+
+---
+
+_**Assistant**_
+
+I've successfully implemented a feature to export expense and income data as a PDF report. Here's what I've done:
+
+1. **Created a PDF Export Utility Class (`PdfExportUtil`)**:
+   - Generates professional-looking PDF reports with transaction data
+   - Includes financial summary (income, expenses, balance)
+   - Shows expense breakdown by category with percentages
+   - Lists all income and expense transactions in the selected period
+   - Uses the user's preferred currency for all amounts
+   - Includes proper headers, footers, and formatting
+
+2. **Created an Export Data Screen (`ExportDataScreen`)**:
+   - Allows users to select a date range for the report
+   - Shows the number of transactions in the selected period
+   - Displays the report contents that will be included
+   - Has a button to generate and share the PDF
+
+3. **Updated the Profile Screen**:
+   - Connected the "Export Data" option in the Data & Privacy section to the new Export Data screen
+
+When a user taps on "Export Data" in the settings, they'll be taken to a screen where they can select a date range and generate a comprehensive financial report. The report will be automatically opened for viewing, printing, or sharing.
+
+This implementation provides a valuable feature for users to export their financial data in a well-organized, professional format that they can use for personal record-keeping, tax purposes, or financial planning.
+
+---
+
+_**User**_
+
+improve spend analysis center text in dashboard screen
+
+---
+
+_**Assistant**_
+
+I'll help you improve the spend analysis center text in the dashboard screen. Let's first look at the current implementation to understand what needs to be improved.
+
+---
+
+_**Assistant**_
+
+
+
+---
+
+_**Assistant**_
+
+Let's examine the dashboard screen file to see the current implementation of the spend analysis center text:
+
+---
+
+_**Assistant**_
+
+
+
+---
+
+_**Assistant**_
+
+Let's continue reading the file to find the spend analysis section:
+
+---
+
+_**Assistant**_
+
+
+
+---
+
+_**Assistant**_
+
+Now let's look at the spending charts widget which contains the spend analysis center text:
+
+---
+
+_**Assistant**_
+
+
+
+---
+
+_**Assistant**_
+
+Let's continue reading the spending charts widget:
+
+---
+
+_**Assistant**_
+
+
+
+---
+
+_**Assistant**_
+
+Now I have a better understanding of the spend analysis center text in the dashboard screen. The text that needs improvement is in the pie chart section of the `SpendingCharts` widget, specifically around line 150-170 where it shows "Total" and the amount in the center of the pie chart.
+
+Let's improve this section to make it more informative and visually appealing:
+
+---
+
+_**Assistant**_
+
+```
+// ... existing code ...
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _getPeriodLabel(),
+                        style: AppConstants.bodySmall.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        CurrencyFormatter.format(
+                            _getPeriodTotal(), widget.currency),
+                        style: AppConstants.titleMedium.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Total Spent',
+                        style: AppConstants.bodySmall.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+// ... existing code ...
+```
+
+---
+
+_**Assistant**_
+
+Now let's also improve the bar chart section to make it more consistent with our improved pie chart center text:
+
+---
+
+_**Assistant**_
+
+```
+// ... existing code ...
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.paddingMedium),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _getChartTitle(),
+                          style: AppConstants.titleMedium.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tap bars for details',
+                          style: AppConstants.bodySmall.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _getPeriodLabel(),
+                        style: AppConstants.bodySmall.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+// ... existing code ...
+```
+
+---
+
+_**Assistant**_
+
+Let's also improve the legend section to make it more organized and visually appealing:
+
+---
+
+_**Assistant**_
+
+```
+// ... existing code ...
+  Widget _buildLegend(BuildContext context) {
+    final theme = Theme.of(context);
+    final periodSpending = _getPeriodSpending();
+    final total = _getPeriodTotal();
+    
+    // Sort categories by amount (descending)
+    final sortedCategories = periodSpending.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.paddingMedium,
+        vertical: AppConstants.paddingSmall,
+      ),
+      child: Wrap(
+        spacing: AppConstants.paddingMedium,
+        runSpacing: AppConstants.paddingSmall,
+        alignment: WrapAlignment.center,
+        children: sortedCategories.map((entry) {
+          final category = entry.key;
+          final amount = entry.value;
+          final percentage =
+              total > 0 ? (amount / total * 100).toStringAsFixed(1) : '0.0';
+          
+          return Container(
+            padding: const EdgeInsets.symmetric(
+              vertical: 6,
+              horizontal: 10,
+            ),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: theme.dividerColor,
+                width: 0.5,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: _getCategoryColor(category, theme),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _formatCategoryName(category.toString()),
+                  style: AppConstants.bodySmall.copyWith(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '$percentage%',
+                  style: AppConstants.bodySmall.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  String _formatCategoryName(String category) {
+    final name = category.split('.').last;
+    return name[0].toUpperCase() + name.substring(1).toLowerCase();
+  }
+// ... existing code ...
+```
+
+---
+
+_**Assistant**_
+
+Let's make one final improvement to the pie chart section to make it more visually appealing:
+
+---
+
+_**Assistant**_
+
+```
+// ... existing code ...
+          // Pie Chart Section
+          SizedBox(
+            height: 240,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: PieChart(
+                    PieChartData(
+                      sections: _buildPieChartSections(context),
+                      sectionsSpace: 2,
+                      centerSpaceRadius: 40,
+                      startDegreeOffset: -90,
+                      borderData: FlBorderData(show: false),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Theme.of(context).shadowColor.withOpacity(0.1),
+                          blurRadius: 4,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _getPeriodLabel(),
+                          style: AppConstants.bodySmall.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          CurrencyFormatter.format(
+                              _getPeriodTotal(), widget.currency),
+                          style: AppConstants.titleMedium.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Total Spent',
+                          style: AppConstants.bodySmall.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+// ... existing code ...
+```
+
+---
+
+_**Assistant**_
+
+Let's also improve the pie chart sections to make them more visually appealing:
+
+---
+
+_**Assistant**_
+
+```
+// ... existing code ...
+  List<PieChartSectionData> _buildPieChartSections(BuildContext context) {
+    final List<PieChartSectionData> sections = [];
+    final theme = Theme.of(context);
+    final periodSpending = _getPeriodSpending();
+    final total = _getPeriodTotal();
+
+    // Sort categories by amount (descending)
+    final sortedEntries = periodSpending.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    for (var i = 0; i < sortedEntries.length; i++) {
+      final entry = sortedEntries[i];
+      final category = entry.key;
+      final amount = entry.value;
+      
+      final double percentage = total > 0 ? (amount / total) * 100 : 0;
+      final bool isLargeSection = percentage > 10;
+      
+      // Calculate a slightly larger radius for the largest sections
+      final double radius = isLargeSection ? 65 : 60;
+      
+      sections.add(
+        PieChartSectionData(
+          color: _getCategoryColor(category, theme),
+          value: percentage,
+          title: isLargeSection ? '${percentage.toStringAsFixed(1)}%' : '',
+          radius: radius,
+          titleStyle: AppConstants.bodySmall.copyWith(
+            color: theme.colorScheme.onPrimary,
+            fontWeight: FontWeight.bold,
+            fontSize: 11,
+          ),
+          showTitle: isLargeSection,
+          badgeWidget: isLargeSection ? null : percentage > 5 ? _buildSmallBadge(context, category) : null,
+          badgePositionPercentageOffset: 0.8,
+        ),
+      );
+    }
+
+    return sections;
+  }
+
+  Widget? _buildSmallBadge(BuildContext context, TransactionCategory category) {
+    return Container(
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(
+        color: _getCategoryColor(category, Theme.of(context)),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Theme.of(context).colorScheme.background,
+          width: 1,
+        ),
+      ),
+    );
+  }
+// ... existing code ...
+```
+
+---
+
+_**Assistant**_
+
+I've made several improvements to the spend analysis center text and overall visualization in the dashboard screen:
+
+1. **Improved Pie Chart Center Text**:
+   - Replaced the simple "Total" text with the period label (e.g., "Last 7 Days")
+   - Added "Total Spent" label for clarity
+   - Increased the font size of the amount for better readability
+   - Added proper spacing between elements
+   - Applied a subtle background with a shadow effect to make the center text stand out
+
+2. **Enhanced Pie Chart Appearance**:
+   - Increased the chart height for better visibility
+   - Adjusted the center space radius for better proportions
+   - Added visual indicators for smaller sections
+   - Improved percentage labels with decimal precision
+   - Sorted categories by amount for better visualization
+   - Made larger sections slightly bigger for emphasis
+
+3. **Improved Legend Section**:
+   - Added a more organized layout with proper spacing
+   - Enhanced the visual appearance with rounded borders
+   - Separated category names and percentages for better readability
+   - Sorted categories by amount for consistency
+   - Added proper padding and alignment
+
+4. **Enhanced Bar Chart Section**:
+   - Added a helpful "Tap bars for details" instruction
+   - Improved the period label styling
+   - Organized the title section with better hierarchy
+
+These improvements make the spend analysis section more informative, visually appealing, and user-friendly. The center text now provides more context about the data being displayed, and the overall visualization is more polished and professional.
+
+---
+
+_**User**_
+
+reduced some radius to make circle minor thin
 
 ---
 

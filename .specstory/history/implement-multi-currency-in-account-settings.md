@@ -2570,6 +2570,627 @@ Let's fix this by using the public `formatCompact` method instead:
 _**Assistant**_
 
 ```
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final currency = _currentUser?.preferredCurrency ?? Currency.usd;
+    
+    // Get currency symbol using a switch statement instead of the private method
+    String getCurrencySymbol() {
+      switch (currency) {
+        case Currency.usd: return '\$';
+        case Currency.eur: return '€';
+        case Currency.gbp: return '£';
+        case Currency.inr: return '₹';
+        case Currency.jpy: return '¥';
+        case Currency.aud: return 'A\$';
+        case Currency.cad: return 'C\$';
+      }
+    }
+    
+    final currencySymbol = getCurrencySymbol();
+
+    return Scaffold(
+```
+
+---
+
+_**Assistant**_
+
+The error is now fixed. I've replaced the call to the private method `CurrencyFormatter._getCurrencySymbol()` with a local function that performs the same task. This approach avoids accessing the private method while maintaining the same functionality.
+
+The solution:
+1. Created a local function `getCurrencySymbol()` that returns the appropriate symbol based on the currency enum
+2. Used this function to set the `currencySymbol` variable
+3. The code now works without trying to access the private method from outside its class
+
+This approach is clean and maintains the same functionality without modifying the `CurrencyFormatter` class.
+
+---
+
+_**User**_
+
+add dummy privacy policy, terms of service on click in setting data & privacy
+
+---
+
+_**Assistant**_
+
+I'll add dummy privacy policy and terms of service screens that will be shown when the user clicks on those options in the settings. Let's implement this:
+
+---
+
+_**Assistant**_
+
+
+
+---
+
+_**Assistant**_
+
+First, let's create the privacy policy screen:
+
+---
+
+_**Assistant**_
+
+```
+import 'package:flutter/material.dart';
+import '../constants/constants.dart';
+import '../widgets/widgets.dart';
+
+class PrivacyPolicyScreen extends StatelessWidget {
+  const PrivacyPolicyScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: const CustomAppBar(
+        title: 'Privacy Policy',
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppConstants.paddingMedium),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Privacy Policy',
+              style: AppConstants.headlineMedium,
+            ),
+            const SizedBox(height: AppConstants.paddingMedium),
+            Text(
+              'Last Updated: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+              style: AppConstants.bodyMedium.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: AppConstants.paddingLarge),
+            _buildSection(
+              'Introduction',
+              'Welcome to WealthWhiz. We respect your privacy and are committed to protecting your personal data. This privacy policy will inform you about how we look after your personal data when you use our application and tell you about your privacy rights and how the law protects you.',
+            ),
+            _buildSection(
+              'Data We Collect',
+              'We may collect, use, store and transfer different kinds of personal data about you which we have grouped together as follows:\n\n'
+              '• Personal Data: Name, email address, and profile picture\n'
+              '• Financial Data: Transaction details, budgets, and financial goals\n'
+              '• Technical Data: Device information, IP address, and app usage statistics\n'
+              '• User Preferences: App settings and preferences',
+            ),
+            _buildSection(
+              'How We Use Your Data',
+              'We use your data to provide and improve our services, including:\n\n'
+              '• Delivering the core functionality of the app\n'
+              '• Personalizing your experience\n'
+              '• Improving our services\n'
+              '• Communicating with you about updates and features',
+            ),
+            _buildSection(
+              'Data Security',
+              'We have implemented appropriate security measures to prevent your personal data from being accidentally lost, used, or accessed in an unauthorized way. We limit access to your personal data to those employees and third parties who have a business need to know.',
+            ),
+            _buildSection(
+              'Your Rights',
+              'Under certain circumstances, you have rights under data protection laws in relation to your personal data, including the right to:\n\n'
+              '• Request access to your personal data\n'
+              '• Request correction of your personal data\n'
+              '• Request erasure of your personal data\n'
+              '• Object to processing of your personal data\n'
+              '• Request restriction of processing your personal data\n'
+              '• Request transfer of your personal data\n'
+              '• Right to withdraw consent',
+            ),
+            _buildSection(
+              'Contact Us',
+              'If you have any questions about this privacy policy or our privacy practices, please contact us at:\n\n'
+              'Email: privacy@wealthwhiz.com\n'
+              'Address: 123 Finance Street, Money City, MC 12345',
+            ),
+            const SizedBox(height: AppConstants.paddingLarge),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSection(String title, String content) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppConstants.paddingLarge),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: AppConstants.titleLarge,
+          ),
+          const SizedBox(height: AppConstants.paddingSmall),
+          Text(
+            content,
+            style: AppConstants.bodyMedium,
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+---
+
+_**Assistant**_
+
+Now, let's create the terms of service screen:
+
+---
+
+_**Assistant**_
+
+```
+import 'package:flutter/material.dart';
+import '../constants/constants.dart';
+import '../widgets/widgets.dart';
+
+class TermsOfServiceScreen extends StatelessWidget {
+  const TermsOfServiceScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: const CustomAppBar(
+        title: 'Terms of Service',
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppConstants.paddingMedium),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Terms of Service',
+              style: AppConstants.headlineMedium,
+            ),
+            const SizedBox(height: AppConstants.paddingMedium),
+            Text(
+              'Last Updated: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+              style: AppConstants.bodyMedium.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: AppConstants.paddingLarge),
+            _buildSection(
+              'Acceptance of Terms',
+              'By accessing or using WealthWhiz, you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree with any of these terms, you are prohibited from using or accessing this app.',
+            ),
+            _buildSection(
+              'Use License',
+              'Permission is granted to temporarily use the WealthWhiz application for personal, non-commercial purposes only. This is the grant of a license, not a transfer of title, and under this license you may not:\n\n'
+              '• Modify or copy the materials\n'
+              '• Use the materials for any commercial purpose\n'
+              '• Attempt to decompile or reverse engineer any software contained in WealthWhiz\n'
+              '• Remove any copyright or other proprietary notations from the materials\n'
+              '• Transfer the materials to another person or "mirror" the materials on any other server',
+            ),
+            _buildSection(
+              'Disclaimer',
+              'The materials on WealthWhiz are provided on an \'as is\' basis. WealthWhiz makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties including, without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.',
+            ),
+            _buildSection(
+              'Limitations',
+              'In no event shall WealthWhiz or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use WealthWhiz, even if WealthWhiz or a WealthWhiz authorized representative has been notified orally or in writing of the possibility of such damage.',
+            ),
+            _buildSection(
+              'Accuracy of Materials',
+              'The materials appearing on WealthWhiz could include technical, typographical, or photographic errors. WealthWhiz does not warrant that any of the materials on its app are accurate, complete or current. WealthWhiz may make changes to the materials contained on its app at any time without notice.',
+            ),
+            _buildSection(
+              'Links',
+              'WealthWhiz has not reviewed all of the sites linked to its app and is not responsible for the contents of any such linked site. The inclusion of any link does not imply endorsement by WealthWhiz of the site. Use of any such linked website is at the user\'s own risk.',
+            ),
+            _buildSection(
+              'Modifications',
+              'WealthWhiz may revise these terms of service for its app at any time without notice. By using this app you are agreeing to be bound by the then current version of these terms of service.',
+            ),
+            _buildSection(
+              'Governing Law',
+              'These terms and conditions are governed by and construed in accordance with the laws and you irrevocably submit to the exclusive jurisdiction of the courts in that location.',
+            ),
+            const SizedBox(height: AppConstants.paddingLarge),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSection(String title, String content) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppConstants.paddingLarge),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: AppConstants.titleLarge,
+          ),
+          const SizedBox(height: AppConstants.paddingSmall),
+          Text(
+            content,
+            style: AppConstants.bodyMedium,
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+---
+
+_**Assistant**_
+
+Now, let's update the profile screen to navigate to these screens when the user taps on the Privacy Policy or Terms of Service options:
+
+---
+
+_**Assistant**_
+
+
+
+---
+
+_**Assistant**_
+
+Now let's update the profile screen to navigate to our new screens:
+
+---
+
+_**Assistant**_
+
+```
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../constants/constants.dart';
+import '../models/user.dart';
+import '../widgets/widgets.dart';
+import '../services/firebase_service.dart';
+import '../widgets/theme_picker_dialog.dart';
+import '../widgets/currency_picker_dialog.dart';
+import '../providers/theme_provider.dart';
+import '../utils/currency_formatter.dart';
+import 'edit_profile_screen.dart';
+import 'privacy_policy_screen.dart';
+import 'terms_of_service_screen.dart';
+
+// ... existing code ...
+
+                _buildSettingsTile(
+                  context,
+                  'Privacy Policy',
+                  Icons.privacy_tip_outlined,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PrivacyPolicyScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildSettingsTile(
+                  context,
+                  'Terms of Service',
+                  Icons.description_outlined,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const TermsOfServiceScreen(),
+                      ),
+                    );
+                  },
+                ),
+```
+
+---
+
+_**Assistant**_
+
+Now let's update the screens.dart file to include our new screens:
+
+---
+
+_**Assistant**_
+
+
+
+---
+
+_**Assistant**_
+
+```
+export 'splash_screen.dart';
+export 'auth_screen.dart';
+export 'home_screen.dart';
+export 'dashboard_screen.dart';
+export 'transactions_screen.dart';
+export 'budget_screen.dart';
+export 'goals_screen.dart';
+export 'profile_screen.dart';
+export 'transaction_form_screen.dart';
+export 'add_goal_screen.dart';
+export 'privacy_policy_screen.dart';
+export 'terms_of_service_screen.dart';
+```
+
+---
+
+_**Assistant**_
+
+Great! I've implemented the following changes:
+
+1. Created a new `PrivacyPolicyScreen` with dummy content that includes:
+   - Introduction section
+   - Data collection information
+   - How data is used
+   - Data security details
+   - User rights
+   - Contact information
+
+2. Created a new `TermsOfServiceScreen` with dummy content that includes:
+   - Acceptance of terms
+   - Use license details
+   - Disclaimers
+   - Limitations
+   - Accuracy of materials
+   - Links policy
+   - Modification terms
+   - Governing law
+
+3. Updated the `ProfileScreen` to navigate to these screens when the user taps on:
+   - Privacy Policy option in the Data & Privacy section
+   - Terms of Service option in the Data & Privacy section
+
+4. Updated the `screens.dart` file to export the new screens
+
+Now when users tap on "Privacy Policy" or "Terms of Service" in the profile settings, they'll be taken to the respective screens with the dummy content. The screens are styled consistently with the rest of the app and provide a professional-looking placeholder for these legal documents.
+
+---
+
+_**User**_
+
+same to by your way for dummy help center & contact support & about
+
+---
+
+_**Assistant**_
+
+I'll create dummy screens for Help Center, Contact Support, and About following the same pattern as the Privacy Policy and Terms of Service screens. Let's implement these:
+
+---
+
+_**Assistant**_
+
+```
+import 'package:flutter/material.dart';
+import '../constants/constants.dart';
+import '../widgets/widgets.dart';
+
+class HelpCenterScreen extends StatelessWidget {
+  const HelpCenterScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: const CustomAppBar(
+        title: 'Help Center',
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppConstants.paddingMedium),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Help Center',
+              style: AppConstants.headlineMedium,
+            ),
+            const SizedBox(height: AppConstants.paddingMedium),
+            Text(
+              'Find answers to common questions and learn how to use WealthWhiz effectively.',
+              style: AppConstants.bodyMedium.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: AppConstants.paddingLarge),
+            
+            // FAQ Categories
+            _buildFaqCategory(
+              context,
+              'Getting Started',
+              [
+                _buildFaqItem(
+                  'How do I create an account?',
+                  'To create an account, download the WealthWhiz app from the App Store or Google Play Store, open it, and tap "Sign Up". Follow the on-screen instructions to complete your registration.',
+                ),
+                _buildFaqItem(
+                  'Is my financial data secure?',
+                  'Yes, we take security very seriously. All your data is encrypted and stored securely. We use industry-standard security measures to protect your information.',
+                ),
+                _buildFaqItem(
+                  'Can I use WealthWhiz on multiple devices?',
+                  'Yes, you can use your WealthWhiz account on multiple devices. Simply sign in with the same credentials on each device.',
+                ),
+              ],
+            ),
+            
+            _buildFaqCategory(
+              context,
+              'Transactions',
+              [
+                _buildFaqItem(
+                  'How do I add a transaction?',
+                  'To add a transaction, go to the Transactions tab and tap the "+" button. Fill in the transaction details and tap "Save".',
+                ),
+                _buildFaqItem(
+                  'Can I edit or delete transactions?',
+                  'Yes, you can edit or delete transactions by tapping on the transaction in the list and selecting the appropriate option.',
+                ),
+                _buildFaqItem(
+                  'How do I categorize transactions?',
+                  'When adding or editing a transaction, you can select a category from the dropdown menu. You can also create custom categories.',
+                ),
+              ],
+            ),
+            
+            _buildFaqCategory(
+              context,
+              'Budgets',
+              [
+                _buildFaqItem(
+                  'How do I create a budget?',
+                  'Go to the Budget tab and tap "Add Budget". Select a category, set your budget amount, and choose the time period.',
+                ),
+                _buildFaqItem(
+                  'How are budget calculations made?',
+                  'Budgets are calculated based on your transactions in the selected category during the specified time period.',
+                ),
+                _buildFaqItem(
+                  'Can I set recurring budgets?',
+                  'Yes, you can set budgets to recur daily, weekly, monthly, or yearly.',
+                ),
+              ],
+            ),
+            
+            _buildFaqCategory(
+              context,
+              'Goals',
+              [
+                _buildFaqItem(
+                  'How do I set a savings goal?',
+                  'Go to the Goals tab and tap "Add Goal". Enter your goal details, including name, target amount, and target date.',
+                ),
+                _buildFaqItem(
+                  'How do I track progress toward my goals?',
+                  'Your goal progress is automatically updated based on the transactions you assign to that goal.',
+                ),
+                _buildFaqItem(
+                  'Can I modify a goal after creating it?',
+                  'Yes, you can edit your goals at any time by tapping on the goal and selecting "Edit".',
+                ),
+              ],
+            ),
+            
+            _buildFaqCategory(
+              context,
+              'Account Settings',
+              [
+                _buildFaqItem(
+                  'How do I change my password?',
+                  'Go to Profile > Security > Change Password and follow the instructions.',
+                ),
+                _buildFaqItem(
+                  'How do I change my currency?',
+                  'Go to Profile > Account Settings > Currency and select your preferred currency.',
+                ),
+                _buildFaqItem(
+                  'How do I delete my account?',
+                  'Go to Profile > Security > Delete Account. Please note that this action is irreversible.',
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: AppConstants.paddingLarge),
+            
+            // Contact Support Button
+            Center(
+              child: CustomButton(
+                text: 'Contact Support',
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/contact_support');
+                },
+                icon: Icons.support_agent,
+                isFullWidth: false,
+                width: 200,
+              ),
+            ),
+            const SizedBox(height: AppConstants.paddingLarge),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFaqCategory(BuildContext context, String title, List<ExpansionTile> items) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppConstants.paddingMedium),
+          child: Text(
+            title,
+            style: AppConstants.titleLarge,
+          ),
+        ),
+        ...items,
+        const SizedBox(height: AppConstants.paddingMedium),
+      ],
+    );
+  }
+
+  ExpansionTile _buildFaqItem(String question, String answer) {
+    return ExpansionTile(
+      title: Text(
+        question,
+        style: AppConstants.titleMedium,
+      ),
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppConstants.paddingMedium,
+            0,
+            AppConstants.paddingMedium,
+            AppConstants.paddingMedium,
+          ),
+          child: Text(
+            answer,
+            style: AppConstants.bodyMedium,
+          ),
+        ),
+      ],
+    );
+  }
+}
+```
+
+---
+
+_**Assistant**_
+
+Now let's create the Contact Support screen:
+
+---
+
+_**Assistant**_
+
+```
 undefined
 ```
 

@@ -9,6 +9,11 @@ import '../widgets/currency_picker_dialog.dart';
 import '../providers/theme_provider.dart';
 import '../utils/currency_formatter.dart';
 import 'edit_profile_screen.dart';
+import 'privacy_policy_screen.dart';
+import 'terms_of_service_screen.dart';
+import 'help_center_screen.dart';
+import 'contact_support_screen.dart';
+import 'about_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -289,7 +294,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   'Privacy Policy',
                   Icons.privacy_tip_outlined,
                   onTap: () {
-                    // TODO: Show privacy policy
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PrivacyPolicyScreen(),
+                      ),
+                    );
                   },
                 ),
                 _buildSettingsTile(
@@ -297,7 +307,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   'Terms of Service',
                   Icons.description_outlined,
                   onTap: () {
-                    // TODO: Show terms of service
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const TermsOfServiceScreen(),
+                      ),
+                    );
                   },
                 ),
               ],
@@ -318,7 +333,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   'Help Center',
                   Icons.help_outline,
                   onTap: () {
-                    // TODO: Navigate to help center
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HelpCenterScreen(),
+                      ),
+                    );
                   },
                 ),
                 _buildSettingsTile(
@@ -326,7 +346,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   'Contact Support',
                   Icons.support_agent_outlined,
                   onTap: () {
-                    // TODO: Show contact support options
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ContactSupportScreen(),
+                      ),
+                    );
                   },
                 ),
                 _buildSettingsTile(
@@ -335,7 +360,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Icons.info_outline,
                   value: 'Version ${AppConstants.appVersion}',
                   onTap: () {
-                    // TODO: Show about dialog
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AboutScreen(),
+                      ),
+                    );
                   },
                 ),
               ],

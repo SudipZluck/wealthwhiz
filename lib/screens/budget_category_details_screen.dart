@@ -29,15 +29,40 @@ class _BudgetCategoryDetailsScreenState
   List<FlSpot> _dailySpending = [];
   List<Transaction> _transactions = [];
   bool _isLoading = true;
+  User? _currentUser;
 
   @override
   void initState() {
     super.initState();
-    _loadTransactionData();
+    _loadUserAndTransactionData();
+  }
+
+  Future<void> _loadUserAndTransactionData() async {
+    setState(() => _isLoading = true);
+    try {
+      // Load user data
+      final firebaseService = FirebaseService();
+      final currentUser = await firebaseService.getCurrentUser();
+      if (currentUser != null) {
+        setState(() {
+          _currentUser = currentUser;
+        });
+      }
+
+      await _loadTransactionData();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to load user data: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _loadTransactionData() async {
-    setState(() => _isLoading = true);
     try {
       final now = DateTime.now();
       final startDate = DateTime(now.year, now.month, 1);
@@ -79,14 +104,13 @@ class _BudgetCategoryDetailsScreenState
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
-    } finally {
-      setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final currency = _currentUser?.preferredCurrency ?? Currency.usd;
 
     return Scaffold(
       appBar: CustomAppBar(
@@ -183,7 +207,8 @@ class _BudgetCategoryDetailsScreenState
                                   reservedSize: 40,
                                   getTitlesWidget: (value, meta) {
                                     return Text(
-                                      '\$${value.toInt()}',
+                                      CurrencyFormatter.formatCompact(
+                                          value, currency),
                                       style: AppConstants.bodySmall,
                                     );
                                   },
@@ -267,7 +292,7 @@ class _BudgetCategoryDetailsScreenState
                               ),
                               trailing: Text(
                                 CurrencyFormatter.format(
-                                    transaction.amount, Currency.usd),
+                                    transaction.amount, currency),
                                 style: AppConstants.titleMedium.copyWith(
                                   color: transaction.type ==
                                           TransactionType.expense

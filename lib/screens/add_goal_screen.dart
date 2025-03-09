@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../constants/constants.dart';
 import '../widgets/widgets.dart';
 import '../models/goal.dart';
+import '../models/user.dart';
 import '../services/services.dart';
+import '../utils/currency_formatter.dart';
 import 'package:uuid/uuid.dart';
 
 class AddGoalScreen extends StatefulWidget {
@@ -19,6 +21,7 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
   DateTime _targetDate = DateTime.now().add(const Duration(days: 365));
   IconData _selectedIcon = Icons.star;
   bool _isLoading = false;
+  User? _currentUser;
 
   final List<IconData> _availableIcons = [
     Icons.home,
@@ -32,6 +35,30 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
     Icons.star,
     Icons.favorite,
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final firebaseService = FirebaseService();
+      final currentUser = await firebaseService.getCurrentUser();
+      if (currentUser != null && mounted) {
+        setState(() {
+          _currentUser = currentUser;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading user data: $e')),
+        );
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -91,6 +118,29 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final currency = _currentUser?.preferredCurrency ?? Currency.usd;
+
+    // Get currency symbol using a switch statement instead of the private method
+    String getCurrencySymbol() {
+      switch (currency) {
+        case Currency.usd:
+          return '\$';
+        case Currency.eur:
+          return '€';
+        case Currency.gbp:
+          return '£';
+        case Currency.inr:
+          return '₹';
+        case Currency.jpy:
+          return '¥';
+        case Currency.aud:
+          return 'A\$';
+        case Currency.cad:
+          return 'C\$';
+      }
+    }
+
+    final currencySymbol = getCurrencySymbol();
 
     return Scaffold(
       appBar: CustomAppBar(
@@ -138,9 +188,9 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
                   const SizedBox(height: AppConstants.paddingMedium),
                   TextFormField(
                     controller: _amountController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Target Amount',
-                      prefixText: '\$',
+                      prefixText: currencySymbol,
                     ),
                     keyboardType: TextInputType.number,
                     validator: (value) {

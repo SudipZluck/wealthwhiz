@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../constants/constants.dart';
 import '../models/models.dart';
+import '../utils/currency_formatter.dart';
 import 'widgets.dart';
 import 'dart:math' as math;
 import 'dart:math' show max;
@@ -16,12 +17,14 @@ class SpendingCharts extends StatefulWidget {
   final List<Transaction> transactions;
   final double totalSpent;
   final Map<TransactionCategory, double> categorySpending;
+  final Currency currency;
 
   const SpendingCharts({
     super.key,
     required this.transactions,
     required this.totalSpent,
     required this.categorySpending,
+    required this.currency,
   });
 
   @override
@@ -153,7 +156,8 @@ class _SpendingChartsState extends State<SpendingCharts> {
                         ),
                       ),
                       Text(
-                        '\$${_getPeriodTotal().toStringAsFixed(0)}',
+                        CurrencyFormatter.format(
+                            _getPeriodTotal(), widget.currency),
                         style: AppConstants.titleMedium.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -236,7 +240,8 @@ class _SpendingChartsState extends State<SpendingCharts> {
                               getTooltipItem:
                                   (group, groupIndex, rod, rodIndex) {
                                 return BarTooltipItem(
-                                  '\$${rod.toY.toStringAsFixed(2)}',
+                                  CurrencyFormatter.format(
+                                      rod.toY, widget.currency),
                                   AppConstants.bodySmall.copyWith(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
@@ -656,7 +661,7 @@ class _SpendingChartsState extends State<SpendingCharts> {
     return SideTitleWidget(
       axisSide: meta.axisSide,
       child: Text(
-        '\$${value.toStringAsFixed(0)}',
+        CurrencyFormatter.formatCompact(value, widget.currency),
         style: textStyle,
       ),
     );

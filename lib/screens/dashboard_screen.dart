@@ -4,6 +4,7 @@ import '../models/models.dart';
 import '../widgets/widgets.dart';
 import '../widgets/spending_charts.dart';
 import '../services/services.dart';
+import '../utils/currency_formatter.dart';
 import 'transactions_screen.dart';
 import 'all_transactions_screen.dart';
 
@@ -17,18 +18,43 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   List<Transaction> _transactions = [];
   bool _isLoading = true;
+  User? _currentUser;
 
   @override
   void initState() {
     super.initState();
-    _loadTransactions();
+    _loadUserAndTransactions();
+  }
+
+  Future<void> _loadUserAndTransactions() async {
+    setState(() => _isLoading = true);
+    try {
+      final firebaseService = FirebaseService();
+      final currentUser = await firebaseService.getCurrentUser();
+      if (currentUser == null) {
+        throw Exception('No user is currently logged in');
+      }
+
+      setState(() {
+        _currentUser = currentUser;
+      });
+
+      await _loadTransactions();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading user data: $e')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _loadTransactions() async {
     setState(() => _isLoading = true);
     try {
       final firebaseService = FirebaseService();
-      final currentUser = await firebaseService.getCurrentUser();
+      final currentUser =
+          _currentUser ?? await firebaseService.getCurrentUser();
       if (currentUser == null) {
         throw Exception('No user is currently logged in');
       }
@@ -53,6 +79,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final currency = _currentUser?.preferredCurrency ?? Currency.usd;
 
     // Calculate total balance, income, and expenses
     double totalIncome = 0;
@@ -91,7 +118,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _loadTransactions,
+        onRefresh: _loadUserAndTransactions,
         child: ListView(
           padding: const EdgeInsets.all(AppConstants.paddingMedium),
           children: [
@@ -106,7 +133,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: AppConstants.paddingMedium),
                   Text(
-                    '\$${totalBalance.toStringAsFixed(2)}',
+                    CurrencyFormatter.format(totalBalance, currency),
                     style: AppConstants.headlineLarge.copyWith(
                       color: theme.colorScheme.primary,
                       fontWeight: FontWeight.bold,
@@ -119,7 +146,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: _buildStatCard(
                           context,
                           'Income',
-                          '\$${totalIncome.toStringAsFixed(2)}',
+                          CurrencyFormatter.format(totalIncome, currency),
                           Icons.arrow_upward,
                           Colors.green,
                         ),
@@ -129,7 +156,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: _buildStatCard(
                           context,
                           'Expenses',
-                          '\$${totalExpenses.toStringAsFixed(2)}',
+                          CurrencyFormatter.format(totalExpenses, currency),
                           Icons.arrow_downward,
                           Colors.red,
                         ),
@@ -146,6 +173,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               transactions: _transactions,
               totalSpent: totalSpent,
               categorySpending: categorySpending,
+              currency: currency,
             ),
             const SizedBox(height: AppConstants.paddingMedium),
 
@@ -185,8 +213,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 context,
                                 transaction.category.toString(),
                                 transaction.type == TransactionType.income
-                                    ? '+\$${transaction.amount.toStringAsFixed(2)}'
-                                    : '\$${transaction.amount.toStringAsFixed(2)}',
+                                    ? '+${CurrencyFormatter.format(transaction.amount, currency)}'
+                                    : CurrencyFormatter.format(
+                                        transaction.amount, currency),
                                 _getRelativeDate(transaction.date),
                                 _getCategoryIcon(transaction.category),
                                 transaction.type == TransactionType.income

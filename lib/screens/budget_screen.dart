@@ -20,6 +20,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
   List<Budget> _filteredBudgets = [];
   Map<String, double> _budgetSpending = {};
   BudgetFrequency _selectedFrequency = BudgetFrequency.monthly;
+  User? _currentUser;
 
   @override
   void initState() {
@@ -72,6 +73,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
         if (mounted) {
           setState(() {
+            _currentUser = currentUser;
             _budgets = budgets;
             _budgetSpending = budgetSpending;
             _filteredBudgets = _filterBudgetsByFrequency(budgets);
@@ -136,6 +138,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final currency = _currentUser?.preferredCurrency ?? Currency.usd;
 
     return Scaffold(
       appBar: CustomAppBar(
@@ -153,7 +156,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   const SizedBox(height: AppConstants.paddingMedium),
 
                   // Total Budget Overview
-                  _buildOverviewCard(),
+                  _buildOverviewCard(currency),
                   const SizedBox(height: AppConstants.paddingMedium),
 
                   // Budget Categories
@@ -210,7 +213,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                   context,
                                   _formatCategoryName(
                                       budget.category.toString()),
-                                  [budget]))
+                                  [budget],
+                                  currency))
                               .toList(),
                       ],
                     ),
@@ -259,6 +263,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     BuildContext context,
     String category,
     List<Budget> budgets,
+    Currency currency,
   ) {
     final theme = Theme.of(context);
     double total = 0;
@@ -301,7 +306,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 style: AppConstants.titleMedium,
               ),
               Text(
-                '${CurrencyFormatter.format(spent, Currency.usd)} / ${CurrencyFormatter.format(total, Currency.usd)}',
+                '${CurrencyFormatter.format(spent, currency)} / ${CurrencyFormatter.format(total, currency)}',
                 style: AppConstants.bodyMedium.copyWith(
                   color:
                       isOverBudget ? Colors.red : theme.colorScheme.onSurface,
@@ -326,7 +331,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     );
   }
 
-  Widget _buildOverviewCard() {
+  Widget _buildOverviewCard(Currency currency) {
     final theme = Theme.of(context);
     final isOverBudget = _totalSpent > _totalBudget;
 
@@ -345,7 +350,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 child: _buildBudgetStat(
                   context,
                   'Total Budget',
-                  CurrencyFormatter.format(_totalBudget, Currency.usd),
+                  CurrencyFormatter.format(_totalBudget, currency),
                   Icons.account_balance_wallet,
                   Theme.of(context).colorScheme.primary,
                 ),
@@ -355,7 +360,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 child: _buildBudgetStat(
                   context,
                   'Spent',
-                  CurrencyFormatter.format(_totalSpent, Currency.usd),
+                  CurrencyFormatter.format(_totalSpent, currency),
                   Icons.shopping_cart,
                   Colors.red,
                 ),
@@ -365,7 +370,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 child: _buildBudgetStat(
                   context,
                   'Remaining',
-                  CurrencyFormatter.format(_totalRemaining, Currency.usd),
+                  CurrencyFormatter.format(_totalRemaining, currency),
                   Icons.savings,
                   Colors.green,
                 ),

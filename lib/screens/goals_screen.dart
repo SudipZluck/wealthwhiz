@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../constants/constants.dart';
 import '../widgets/widgets.dart';
 import '../models/goal.dart';
+import '../models/user.dart';
 import '../services/services.dart';
+import '../utils/currency_formatter.dart';
 import 'add_goal_screen.dart';
 
 class GoalsScreen extends StatefulWidget {
@@ -16,11 +18,38 @@ class _GoalsScreenState extends State<GoalsScreen> {
   final GoalService _goalService = GoalService();
   List<Goal> _goals = [];
   bool _isLoading = true;
+  User? _currentUser;
 
   @override
   void initState() {
     super.initState();
-    _loadGoals();
+    _loadUserAndGoals();
+  }
+
+  Future<void> _loadUserAndGoals() async {
+    setState(() => _isLoading = true);
+    try {
+      // Load user data
+      final firebaseService = FirebaseService();
+      final currentUser = await firebaseService.getCurrentUser();
+      if (currentUser != null) {
+        setState(() {
+          _currentUser = currentUser;
+        });
+      }
+
+      await _loadGoals();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading user data: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   Future<void> _loadGoals() async {
@@ -29,7 +58,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
       if (mounted) {
         setState(() {
           _goals = goals;
-          _isLoading = false;
         });
       }
     } catch (e) {
@@ -44,6 +72,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final currency = _currentUser?.preferredCurrency ?? Currency.usd;
 
     return Scaffold(
       appBar: CustomAppBar(
@@ -58,7 +87,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _loadGoals,
+        onRefresh: _loadUserAndGoals,
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : ListView(
@@ -80,7 +109,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
                               child: _buildSavingsStat(
                                 context,
                                 'Current',
-                                '\$${_calculateTotalCurrentAmount().toStringAsFixed(2)}',
+                                CurrencyFormatter.format(
+                                    _calculateTotalCurrentAmount(), currency),
                                 Icons.savings,
                                 theme.colorScheme.primary,
                               ),
@@ -90,7 +120,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
                               child: _buildSavingsStat(
                                 context,
                                 'Target',
-                                '\$${_calculateTotalTargetAmount().toStringAsFixed(2)}',
+                                CurrencyFormatter.format(
+                                    _calculateTotalTargetAmount(), currency),
                                 Icons.flag,
                                 Colors.green,
                               ),
@@ -120,6 +151,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                 goal.targetDate,
                                 _getIconForGoal(goal.name),
                                 _getColorForGoal(goal.name),
+                                currency,
                               )),
                         ],
                       ),
@@ -144,6 +176,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                     _getIconForGoal(goal.name),
                                     _getColorForGoal(goal.name),
                                     goal.updatedAt ?? goal.createdAt,
+                                    currency,
                                   )),
                         ],
                       ),
@@ -251,6 +284,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
     DateTime targetDate,
     IconData icon,
     Color color,
+    Currency currency,
   ) {
     final progress = current / target;
     final theme = Theme.of(context);
@@ -270,7 +304,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
             ),
             title: Text(title),
             subtitle: Text(
-              '\$${current.toStringAsFixed(2)} of \$${target.toStringAsFixed(2)}',
+              '${CurrencyFormatter.format(current, currency)} of ${CurrencyFormatter.format(target, currency)}',
               style: AppConstants.bodySmall.copyWith(
                 color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
@@ -314,6 +348,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
     IconData icon,
     Color color,
     DateTime completedDate,
+    Currency currency,
   ) {
     final theme = Theme.of(context);
 
@@ -330,7 +365,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
         ),
       ),
       trailing: Text(
-        '\$${amount.toStringAsFixed(2)}',
+        CurrencyFormatter.format(amount, currency),
         style: AppConstants.titleMedium.copyWith(
           color: color,
           fontWeight: FontWeight.bold,

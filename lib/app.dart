@@ -39,6 +39,7 @@ class WealthWhizApp extends StatelessWidget {
 
           return MaterialApp(
             title: 'WealthWhiz',
+            debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: themeProvider.themeMode,

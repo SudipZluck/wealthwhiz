@@ -5,7 +5,9 @@ import '../models/user.dart';
 import '../widgets/widgets.dart';
 import '../services/firebase_service.dart';
 import '../widgets/theme_picker_dialog.dart';
+import '../widgets/currency_picker_dialog.dart';
 import '../providers/theme_provider.dart';
+import '../utils/currency_formatter.dart';
 import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -214,9 +216,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   context,
                   'Currency',
                   Icons.attach_money,
-                  value: 'USD',
+                  value: _getCurrencyName(_user.preferredCurrency),
                   onTap: () {
-                    // TODO: Show currency picker
+                    showDialog(
+                      context: context,
+                      barrierDismissible: true,
+                      builder: (dialogContext) => CurrencyPickerDialog(
+                        currentCurrency: _user.preferredCurrency,
+                        onCurrencyChanged: (Currency currency) async {
+                          try {
+                            // Update user's preferred currency
+                            final updatedUser = _user.copyWith(
+                              preferredCurrency: currency,
+                              updatedAt: DateTime.now(),
+                            );
+
+                            final firebaseService = FirebaseService();
+                            await firebaseService.updateUserData(updatedUser);
+
+                            // Refresh user data
+                            await _loadUserData();
+
+                            if (!mounted) return;
+
+                            // Show feedback
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Currency updated to ${_getCurrencyName(currency)}',
+                                ),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          } catch (e) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to update currency: $e'),
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.error,
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    );
                   },
                 ),
               ],
@@ -378,5 +422,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
       onTap: onTap,
     );
+  }
+
+  String _getCurrencyName(Currency currency) {
+    switch (currency) {
+      case Currency.usd:
+        return 'US Dollar (USD)';
+      case Currency.eur:
+        return 'Euro (EUR)';
+      case Currency.gbp:
+        return 'British Pound (GBP)';
+      case Currency.inr:
+        return 'Indian Rupee (INR)';
+      case Currency.jpy:
+        return 'Japanese Yen (JPY)';
+      case Currency.aud:
+        return 'Australian Dollar (AUD)';
+      case Currency.cad:
+        return 'Canadian Dollar (CAD)';
+    }
   }
 }
